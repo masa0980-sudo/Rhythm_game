@@ -23,7 +23,7 @@
   #stage{position:relative;width:min(100vw,480px);height:min(100vh,880px);overflow:hidden;}
 
   .btn{
-    margin-top:20px;cursor:pointer;user-select:none;border:none;
+    margin-top:18px;cursor:pointer;user-select:none;border:none;
     padding:15px 46px;font-size:18px;font-weight:800;letter-spacing:.14em;
     color:#0a1420;border-radius:40px;
     background:linear-gradient(90deg,var(--accent2),var(--accent));
@@ -36,10 +36,12 @@
     box-shadow:none;font-size:14px;padding:11px 26px;letter-spacing:.08em;}
   .btn.ghost:hover{background:rgba(255,255,255,.07);transform:none;box-shadow:none;}
 
+  .screen{position:absolute;inset:0;display:none;}
+
   /* ===== タイトル画面 ===== */
   #title{
-    position:absolute;inset:0;z-index:30;padding:20px;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    z-index:30;padding:20px;
+    flex-direction:column;align-items:center;justify-content:center;text-align:center;
     overflow-y:auto;
   }
   h1{
@@ -65,9 +67,45 @@
   .opt .optHead span{color:var(--accent2);}
   .opt input[type=range]{width:100%;margin:8px 0 4px;accent-color:var(--accent);}
   .optNote{font-size:11px;line-height:1.7;opacity:.7;}
+  .optNote b{color:var(--accent2);}
+
+  /* ===== 音ズレ計測（キャリブレーション） ===== */
+  #calib{
+    z-index:35;padding:22px;touch-action:none;
+    flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  }
+  #calib h2{font-size:22px;font-weight:900;letter-spacing:.05em;color:var(--accent2);}
+  #calibLead{margin-top:12px;max-width:320px;font-size:13px;line-height:1.9;opacity:.9;}
+  #calibLead b{color:var(--accent2);}
+  #calibArena{position:relative;width:200px;height:200px;margin:26px 0 6px;}
+  #calibRing{
+    position:absolute;left:50%;top:50%;width:120px;height:120px;
+    transform:translate(-50%,-50%);
+    border:5px solid var(--accent2);border-radius:50%;
+    box-shadow:0 0 16px rgba(255,209,102,.3);
+  }
+  #calibRing.beat{animation:cbeat .22s ease-out;}
+  @keyframes cbeat{
+    0%{transform:translate(-50%,-50%) scale(1.3);border-color:#fff;
+       box-shadow:0 0 42px rgba(255,255,255,.9);}
+    100%{transform:translate(-50%,-50%) scale(1);border-color:var(--accent2);
+       box-shadow:0 0 16px rgba(255,209,102,.3);}
+  }
+  #calibCount{font-size:15px;font-weight:800;letter-spacing:.08em;min-height:22px;}
+  #calibCount b{color:var(--accent2);font-size:22px;}
+  #calibDots{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;
+    max-width:240px;margin:12px auto 0;min-height:9px;}
+  #calibDots div{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.16);}
+  #calibDots div.on{background:var(--accent2);}
+  /* 計測後に出る結果パネル */
+  #calibDone{display:none;margin-top:18px;max-width:320px;}
+  #calibVal{font-size:15px;line-height:1.8;}
+  #calibVal b{font-size:28px;color:var(--accent2);}
+  #calibNote{margin-top:8px;font-size:12px;line-height:1.75;opacity:.8;}
+  #calibBtns{display:flex;flex-direction:column;align-items:center;}
 
   /* ===== プレイ画面 ===== */
-  #play{display:none;flex-direction:column;height:100%;padding:16px 16px 20px;touch-action:none;}
+  #play{flex-direction:column;height:100%;padding:16px 16px 20px;touch-action:none;}
   header{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 12px;}
   .logo{font-size:14px;font-weight:800;letter-spacing:.1em;color:var(--accent);}
   .stat{font-size:12px;opacity:.85;text-align:right;}
@@ -173,7 +211,7 @@
   #hint{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:12px;opacity:.55;}
 
   /* ===== 結果 ===== */
-  #result{position:absolute;inset:0;z-index:40;display:none;
+  #result{z-index:40;
     align-items:center;justify-content:center;padding:22px;
     background:rgba(6,8,13,.88);backdrop-filter:blur(3px);}
   .card{width:100%;max-width:340px;padding:24px 22px;border-radius:18px;text-align:center;
@@ -188,14 +226,31 @@
   .scoreLine b{font-size:26px;color:var(--accent);}
   .bestLine{font-size:12px;opacity:.75;margin-bottom:4px;}
   /* 平均してどれだけ早い/遅いかを伝え、音ズレ調整の目安にしてもらう */
-  .biasLine{font-size:12px;line-height:1.7;opacity:.9;margin:8px 0 0;color:var(--accent);}
+  .biasLine{font-size:12px;line-height:1.7;opacity:.9;margin:8px 0 0;color:var(--accent);white-space:pre-line;}
+
+  /* 画面の縦が短い端末（iPhone SE など）で、スタートボタンが画面外へ出ないよう詰める */
+  @media (max-height:700px){
+    h1{font-size:clamp(21px,5.6vw,28px);}
+    .sub{margin-top:6px;font-size:11px;}
+    .rule{margin-top:12px;padding:11px 14px;font-size:12px;line-height:1.75;}
+    .opt{margin-top:11px;padding:10px 14px;}
+    .optNote{font-size:10.5px;line-height:1.6;}
+    .best{margin-top:10px;font-size:11.5px;}
+    .btn{margin-top:12px;padding:13px 40px;font-size:17px;}
+    .btn.ghost{padding:9px 22px;font-size:13px;}
+    #calibLead{margin-top:9px;font-size:12px;line-height:1.75;}
+    #calibArena{width:150px;height:150px;margin:14px 0 4px;}
+    #calibRing{width:96px;height:96px;}
+    #calib h2{font-size:19px;}
+    #calibNote{font-size:11px;}
+  }
 </style>
 </head>
 <body>
 <div id="stage">
 
   <!-- ===== タイトル ===== -->
-  <div id="title">
+  <div id="title" class="screen">
     <h1>ぴったり<br>リング</h1>
     <div class="sub">RHYTHM TIMING GAME</div>
     <div class="rule">
@@ -206,17 +261,45 @@
     <div class="opt">
       <div class="optHead">音ズレ調整　<span id="offsetVal">0</span> ms</div>
       <input type="range" id="offsetRange" min="-200" max="200" step="5" value="0">
-      <div class="optNote">
-        ちゃんと合わせたのに「おそい」と出るなら ＋ 側、「はやい」と出るなら − 側へ。
-        結果画面に平均のズレが出るので、それを目安にしてください。
+      <div class="optNote" id="offsetNote">
+        端末ごとの音の遅れを補正します。ふつうは<b>自動計測</b>のままでOK。
+        手で微調整したいときだけ動かしてください。
       </div>
+      <button class="btn ghost" id="calibBtn" style="margin-top:10px;width:100%;">音ズレを測りなおす</button>
     </div>
     <div class="best" id="bestLine">まだ記録がありません</div>
     <button class="btn" id="startBtn">スタート</button>
   </div>
 
+  <!-- ===== 音ズレ計測 ===== -->
+  <div id="calib" class="screen">
+    <h2>音ズレを測ります</h2>
+    <div id="calibLead">
+      端末やイヤホンによって、音が耳に届くまでの<b>遅れ</b>はまちまちです。<br>
+      これから一定のリズムで音が鳴るので、<b>音に合わせてタップ</b>（またはスペースキー）してください。<br>
+      正確さは気にせず、自然に合わせてください。
+    </div>
+    <div id="calibArena">
+      <div id="calibRing"></div>
+    </div>
+    <div id="calibCount"></div>
+    <div id="calibDots"></div>
+
+    <div id="calibDone">
+      <div id="calibVal"></div>
+      <div id="calibNote"></div>
+    </div>
+
+    <div id="calibBtns">
+      <button class="btn" id="calibStartBtn">計測をはじめる</button>
+      <button class="btn" id="calibAcceptBtn" style="display:none;">この設定で始める</button>
+      <button class="btn ghost" id="calibRetryBtn" style="display:none;">もう一度測る</button>
+      <button class="btn ghost" id="calibSkip">スキップ</button>
+    </div>
+  </div>
+
   <!-- ===== プレイ ===== -->
-  <div id="play">
+  <div id="play" class="screen">
     <header>
       <div class="logo">ぴったりリング</div>
       <div class="stat">SCORE <b id="scoreVal">0</b>　COMBO <b id="comboVal">0</b></div>
@@ -239,7 +322,7 @@
   </div>
 
   <!-- ===== 結果 ===== -->
-  <div id="result">
+  <div id="result" class="screen">
     <div class="card">
       <h2 id="gradeText">A</h2>
       <div class="sub2" id="gradeSub"></div>
@@ -268,6 +351,21 @@
   const DEBUG = /[?&]debug=1\b/.test(location.search);
   if(DEBUG) window.__rhythmDebug = [];
 
+  // 画面はどれか1つだけ表示する
+  const SCREENS = ["title","calib","play","result"];
+  function show(id){
+    SCREENS.forEach(function(s){
+      $(s).style.display = (s === id) ? "flex" : "none";
+    });
+  }
+
+  function median(arr){
+    if(!arr.length) return 0;
+    const a = arr.slice().sort(function(x,y){ return x - y; });
+    const n = a.length;
+    return n % 2 ? a[(n-1)/2] : (a[n/2-1] + a[n/2]) / 2;
+  }
+
   /* =========================================================
      1. Sfx — Web Audio API で音を生成する（外部音源ファイル不要）
      ========================================================= */
@@ -283,7 +381,7 @@
       }
       return ctx;
     }
-    // ユーザー操作（スタートボタン押下）内で呼び、自動再生制限を解除する
+    // ユーザー操作（ボタン押下）内で呼び、自動再生制限を解除する
     function unlock(){
       const c = ensure();
       if(c.state === "suspended") c.resume();
@@ -294,6 +392,8 @@
     // 予定時刻に「鳴らす」よう指示しても、耳に届くのはこの分だけあと。
     // プレイヤーは聞こえた音に合わせて押すので、判定も表示もこの遅れを足した
     // 時刻を基準にしないと、正しく押しても早い判定になってしまう。
+    // ただしブラウザが申告する値は実機の遅れの一部でしかないことが多いので、
+    // 残りは計測（Calibration）で求めた userOffset が引き受ける。
     function latency(){
       const c = ensure();
       const out = (typeof c.outputLatency === "number" && c.outputLatency > 0) ? c.outputLatency : 0;
@@ -336,6 +436,12 @@
       }
     }
 
+    // 計測用。全部の拍を同じ音でハッキリ鳴らす（合わせやすさ優先）
+    function playCalibTick(beat, time){
+      ensure();
+      tone(time, { type:"square", freq: beat.isHit ? 1200 : 800, dur:0.06, peak:0.26 });
+    }
+
     function judgeSfx(verdict){
       const c = ensure();
       const t = c.currentTime;
@@ -348,14 +454,18 @@
         tone(t, { type:"sawtooth", freq:220, freqEnd:120, dur:0.18, peak:0.2 });
       }
     }
+    function tapSfx(){
+      const c = ensure();
+      tone(c.currentTime, { type:"sine", freq:520, dur:0.06, peak:0.16 });
+    }
 
-    return { unlock, latency, playTick, judgeSfx };
+    return { unlock, latency, playTick, playCalibTick, judgeSfx, tapSfx };
   })();
 
   /* =========================================================
      2. Engine — 汎用のリズム・スケジューラ（DOMやゲーム固有ルールを知らない）
-        将来ちがうミニゲームを作るときも、beats配列と judged/sessionEnd の
-        イベント購読だけ差し替えれば使い回せる。
+        ミニゲームは beats 配列と judged/frame/sessionEnd の購読だけで作れる。
+        ゲーム本編と音ズレ計測の2モードが、どちらもこの Engine を使っている。
      ========================================================= */
   const Engine = (function(){
     // 迫ってくるリングを先の拍まで見せたいので、音の予約もその分だけ先まで進めておく。
@@ -367,19 +477,33 @@
     let beats = [];
     let idx = 0, nextTime = 0, timerID = null, running = false, ended = false;
     let audioOffset = 0;
-    let userOffset = 0;            // 秒。プレイヤーが手動で調整するズレ
+    let userOffset = 0;            // 秒。計測または手動調整で決まるズレ
+    let sessionId = 0;             // モードを切り替えたとき、前のセッションの後始末が
+                                   // 新しいセッションに紛れ込まないようにするための番号
     const hitQueue = [];
-    const listeners = {};
+    let listeners = {};
 
     function on(evt, cb){ (listeners[evt] = listeners[evt] || []).push(cb); }
     function emit(evt, payload){ (listeners[evt] || []).forEach(fn => fn(payload)); }
 
-    // 「プレイヤーが拍だと感じる時刻」。出力遅延と手動調整を足したもの。
+    // 実行中のセッションを止め、購読も全部捨てる。モードを切り替える前に必ず呼ぶ。
+    function reset(){
+      sessionId++;
+      running = false;
+      ended = true;
+      clearInterval(timerID);
+      timerID = null;
+      hitQueue.length = 0;
+      listeners = {};
+    }
+
+    // 「プレイヤーが拍だと感じる時刻」。出力遅延と計測ズレを足したもの。
     // 判定も描画もすべてこの時刻を基準にすることで、音・見た目・判定が一致する。
     function offset(){ return Sfx.latency() + userOffset; }
     function perceived(t){ return t + offset(); }
 
-    function schedulerLoop(){
+    function schedulerLoop(myId){
+      if(myId !== sessionId) return;
       const c = Sfx.unlock();
       while(idx < beats.length && nextTime < c.currentTime + SCHEDULE_AHEAD){
         const b = beats[idx];
@@ -394,7 +518,7 @@
         clearInterval(timerID);
         const lastTime = beats[beats.length - 1].time;
         const waitMs = Math.max(0, (perceived(lastTime) + cfg.missWindowMs/1000) - c.currentTime) * 1000 + 200;
-        setTimeout(finalizeSession, waitMs);
+        setTimeout(function(){ if(myId === sessionId) finalizeSession(); }, waitMs);
       }
     }
 
@@ -408,14 +532,14 @@
       }
     }
 
-    function rafLoop(){
-      if(!running) return;
+    function rafLoop(myId){
+      if(myId !== sessionId || !running) return;
       const c = Sfx.unlock();
       const now = c.currentTime;
       audioOffset = now - performance.now()/1000;
       resolveAutoMisses(now);
       emit("frame", { now });
-      requestAnimationFrame(rafLoop);
+      requestAnimationFrame(function(){ rafLoop(myId); });
     }
 
     function finalizeSession(){
@@ -426,14 +550,15 @@
 
     function start(newCfg){
       const c = Sfx.unlock();
+      const myId = ++sessionId;
       cfg = newCfg;
       beats = cfg.beats;
       userOffset = (cfg.userOffsetMs || 0) / 1000;
       idx = 0; hitQueue.length = 0; running = true; ended = false;
       nextTime = c.currentTime + 0.2;
-      schedulerLoop();
-      timerID = setInterval(schedulerLoop, LOOKAHEAD_MS);
-      requestAnimationFrame(rafLoop);
+      schedulerLoop(myId);
+      timerID = setInterval(function(){ schedulerLoop(myId); }, LOOKAHEAD_MS);
+      requestAnimationFrame(function(){ rafLoop(myId); });
     }
 
     function judgeInput(rawTimeStampMs){
@@ -468,7 +593,7 @@
     function isRunning(){ return running; }
     function now(){ return Sfx.unlock().currentTime; }
 
-    return { on, start, judgeInput, peekHits, isRunning, now, perceived, offset };
+    return { on, reset, start, judgeInput, peekHits, isRunning, now, perceived, offset };
   })();
 
   /* =========================================================
@@ -481,7 +606,8 @@
     function setHandler(fn){ handler = fn; }
     function fire(timeStamp){ if(handler) handler(timeStamp); }
 
-    function bind(el){
+    // 画面ごとに呼ぶ。タップ操作の登録。
+    function bindPointer(el){
       el.addEventListener("touchstart", function(e){
         e.preventDefault();               // スクロール/ズーム & 合成clickの抑止
         lastTouchAt = performance.now();
@@ -492,7 +618,10 @@
         if(performance.now() - lastTouchAt < 500) return;  // touch直後の合成clickは無視
         fire(e.timeStamp);
       });
+    }
 
+    // キーボードは document に1回だけ登録する（画面ごとに付けると二重発火する）
+    function bindKeys(){
       document.addEventListener("keydown", function(e){
         if(e.code !== "Space" || e.repeat) return;
         if(!Engine.isRunning()) return;   // プレイ中以外はスペースの既定動作を邪魔しない
@@ -501,11 +630,199 @@
       });
     }
 
-    return { bind, setHandler };
+    return { bindPointer, bindKeys, setHandler };
   })();
 
   /* =========================================================
-     4. RingGame — 「ぴったりリング」ミニゲーム固有のロジックと見た目
+     4. Settings — 音ズレ調整値の保存と読み出し
+     ========================================================= */
+  const Settings = (function(){
+    const OFFSET_KEY = "rhythm-ring-offset";
+    const DONE_KEY   = "rhythm-ring-calibrated";
+    let offsetMs = 0;
+
+    function load(){
+      try{ offsetMs = Number(localStorage.getItem(OFFSET_KEY)) || 0; }catch(e){ offsetMs = 0; }
+      return offsetMs;
+    }
+    function get(){ return offsetMs; }
+    function set(ms){
+      offsetMs = clamp(Math.round(ms), -200, 200);
+      try{ localStorage.setItem(OFFSET_KEY, String(offsetMs)); }catch(e){}
+      return offsetMs;
+    }
+    function isCalibrated(){
+      try{ return localStorage.getItem(DONE_KEY) === "1"; }catch(e){ return false; }
+    }
+    function markCalibrated(){
+      try{ localStorage.setItem(DONE_KEY, "1"); }catch(e){}
+    }
+    return { load, get, set, isCalibrated, markCalibrated };
+  })();
+
+  /* =========================================================
+     5. Calibration — 音ズレの自動計測
+        一定テンポで鳴らし、プレイヤーが合わせて叩いたズレの中央値を採る。
+        中央値なので、数回とちってもその外れ値に引きずられない。
+        計測中は userOffset を 0 にして、素のズレを測る。
+     ========================================================= */
+  const Calibration = (function(){
+    const BPM = 100;
+    const LEAD_BEATS = 4;      // 助走。ここは測らない
+    const MEASURE_BEATS = 16;  // 測る拍数
+    const DROP_FIRST = 2;      // 出だしは安定しないので捨てる
+    const MIN_TAPS = 8;        // これ未満なら計測失敗とみなす
+    const ACCEPT_MS = 250;     // これ以上ずれた入力は拍と無関係とみなし採用しない
+
+    let deltas = [];
+    let pulsedUpTo = -1;
+    let beats = [];
+    let onFinish = null;       // 計測完了後にどこへ戻るか
+
+    function buildBeats(){
+      const list = [];
+      for(let i=0;i<LEAD_BEATS;i++){
+        list.push({ bpm:BPM, gapQN:1, isHit:false, isCountdown:false });
+      }
+      for(let i=0;i<MEASURE_BEATS;i++){
+        list.push({ bpm:BPM, gapQN:1, isHit:true });
+      }
+      return list;
+    }
+
+    function paintDots(){
+      const box = $("calibDots");
+      for(let i=0;i<box.children.length;i++){
+        box.children[i].className = i < deltas.length ? "on" : "";
+      }
+    }
+    function resetDots(){
+      const box = $("calibDots");
+      box.innerHTML = "";
+      for(let i=0;i<MEASURE_BEATS;i++) box.appendChild(document.createElement("div"));
+    }
+
+    function onFrame(){
+      const now = Engine.now();
+      for(let i=pulsedUpTo+1;i<beats.length;i++){
+        const b = beats[i];
+        if(typeof b.time !== "number") break;
+        if(Engine.perceived(b.time) <= now){
+          pulsedUpTo = i;
+          const el = $("calibRing");
+          el.classList.remove("beat");
+          void el.offsetWidth;
+          el.classList.add("beat");
+        }else break;
+      }
+    }
+
+    function onJudged(p){
+      if(p.deltaMs == null) return;              // 叩かなかった拍は無視
+      if(Math.abs(p.deltaMs) > ACCEPT_MS) return; // 明らかに拍と無関係な入力は捨てる
+      deltas.push(p.deltaMs);
+      Sfx.tapSfx();
+      paintDots();
+      const left = MEASURE_BEATS - deltas.length;
+      $("calibCount").innerHTML = left > 0 ? "あと <b>" + left + "</b> 回" : "計測中…";
+    }
+
+    function onSessionEnd(){
+      Engine.reset();
+      const used = deltas.slice(DROP_FIRST);
+      if(used.length < MIN_TAPS){
+        $("calibCount").textContent = "";
+        $("calibVal").textContent = "うまく測れませんでした";
+        $("calibNote").textContent =
+          "音に合わせて " + MIN_TAPS + " 回以上タップが必要です。もう一度おためしください。";
+        $("calibDone").style.display = "block";
+        $("calibStartBtn").style.display = "none";
+        $("calibAcceptBtn").style.display = "none";
+        $("calibRetryBtn").style.display = "inline-block";
+        $("calibSkip").style.display = "inline-block";   // 測れなくても先へ進めるようにしておく
+        return;
+      }
+      // 中央値ぶんだけ「拍だと感じる時刻」を後ろへずらせば、次からズレが0に寄る
+      const measured = Settings.set(median(used));
+      Settings.markCalibrated();
+
+      const spread = median(used.map(function(d){ return Math.abs(d - median(used)); }));
+      $("calibCount").textContent = "";
+      $("calibVal").innerHTML = "あなたの音ズレ　<b>" + (measured >= 0 ? "+" : "") + measured + "</b> ms";
+      $("calibNote").textContent =
+        "この分だけ判定をずらして合わせます（" + used.length + "回の入力から算出／ばらつき±"
+        + Math.round(spread) + "ms）。あとからタイトルの調整バーで微調整もできます。";
+      $("calibDone").style.display = "block";
+      $("calibStartBtn").style.display = "none";
+      $("calibAcceptBtn").style.display = "inline-block";
+      $("calibRetryBtn").style.display = "inline-block";
+      $("calibSkip").style.display = "none";   // 測れたので、あとは進むか測りなおすかだけ
+    }
+
+    function run(){
+      Engine.reset();
+      deltas = [];
+      pulsedUpTo = -1;
+      beats = buildBeats();
+      resetDots();
+      $("calibDone").style.display = "none";
+      $("calibStartBtn").style.display = "none";
+      $("calibAcceptBtn").style.display = "none";
+      $("calibRetryBtn").style.display = "none";
+      $("calibSkip").style.display = "inline-block";
+      $("calibCount").innerHTML = "あと <b>" + MEASURE_BEATS + "</b> 回";
+
+      Engine.on("frame", onFrame);
+      Engine.on("judged", onJudged);
+      Engine.on("sessionEnd", onSessionEnd);
+      Engine.start({
+        beats: beats,
+        // 計測では良し悪しを判定しない。素のズレだけを集める。
+        windows: { perfectMs: ACCEPT_MS, goodMs: ACCEPT_MS },
+        searchMs: ACCEPT_MS,
+        missWindowMs: 260,
+        userOffsetMs: 0,          // 素のズレを測るため補正なしで走らせる
+        onScheduleTick: Sfx.playCalibTick
+      });
+    }
+
+    // 計測画面を開く（まだ走らせず、説明と開始ボタンを出す）
+    function open(finishCb){
+      Engine.reset();
+      onFinish = finishCb;
+      deltas = [];
+      resetDots();
+      $("calibCount").textContent = "";
+      $("calibDone").style.display = "none";
+      $("calibStartBtn").style.display = "inline-block";
+      $("calibAcceptBtn").style.display = "none";
+      $("calibRetryBtn").style.display = "none";
+      $("calibSkip").style.display = "inline-block";
+      show("calib");
+    }
+
+    function finish(){
+      Engine.reset();
+      const cb = onFinish; onFinish = null;
+      if(cb) cb();
+    }
+
+    function mount(){
+      Input.bindPointer($("calibArena"));
+      $("calibStartBtn").addEventListener("click", run);
+      $("calibRetryBtn").addEventListener("click", run);
+      $("calibAcceptBtn").addEventListener("click", finish);
+      $("calibSkip").addEventListener("click", function(){
+        Settings.markCalibrated();   // 次回から自動では出さない（測りなおしはいつでも可能）
+        finish();
+      });
+    }
+
+    return { mount, open };
+  })();
+
+  /* =========================================================
+     6. RingGame — 「ぴったりリング」ミニゲーム固有のロジックと見た目
      ========================================================= */
   const RingGame = (function(){
     // 判定幅。押す瞬間が分かるようにした分、極端に狭くはしない。
@@ -522,13 +839,11 @@
     const SCALE_MAX = 4.2;
     const RING_POOL = 4;            // 同時に見せる先読みリングの数
     const BEST_KEY = "rhythm-ring-best";
-    const OFFSET_KEY = "rhythm-ring-offset";
 
     let beats = [];
     let stats = null;
     let rings = [];
     let pulsedUpTo = -1;
-    let userOffsetMs = 0;
 
     function buildBeats(){
       const list = [];
@@ -545,7 +860,7 @@
           const gaps = [1,0.5,0.5,1,1,0.5,0.5,1];
           let acc = 0;
           for(let k=0;k<8;k++){
-            const isOff = Math.abs(acc - Math.round(acc)) > 0.01;   // 小節内で拍の頭からずれている
+            const isOff = Math.abs(acc - Math.round(acc)) > 0.01;   // 拍の頭からずれている
             list.push({ bpm:ph.bpm, gapQN:gaps[k], isHit:true, isOff:isOff });
             acc += gaps[k];
           }
@@ -559,12 +874,6 @@
     }
     function saveBest(rec){
       try{ localStorage.setItem(BEST_KEY, JSON.stringify(rec)); }catch(e){}
-    }
-    function loadOffset(){
-      try{ return Number(localStorage.getItem(OFFSET_KEY)) || 0; }catch(e){ return 0; }
-    }
-    function saveOffset(ms){
-      try{ localStorage.setItem(OFFSET_KEY, String(ms)); }catch(e){}
     }
     function paintBestLine(){
       const best = loadBest();
@@ -723,16 +1032,15 @@
     // 平均のズレを見せて、音ズレ調整をいくつにすればいいか分かるようにする
     function biasText(){
       if(stats.deltas.length < 4) return "";
-      const mean = stats.deltas.reduce(function(a,b){ return a+b; }, 0) / stats.deltas.length;
-      if(Math.abs(mean) < 18) return "平均のズレ " + mean.toFixed(0) + " ms　ほぼぴったりです。";
-      const dir = mean > 0 ? "おそめ" : "はやめ";
-      const suggest = Math.round((userOffsetMs + mean) / 5) * 5;
-      return "平均して " + Math.abs(mean).toFixed(0) + " ms " + dir + "です。\n" +
+      const mid = median(stats.deltas);
+      if(Math.abs(mid) < 18) return "ズレの中央値 " + mid.toFixed(0) + " ms　ほぼぴったりです。";
+      const dir = mid > 0 ? "おそめ" : "はやめ";
+      const suggest = clamp(Math.round((Settings.get() + mid) / 5) * 5, -200, 200);
+      return "全体に " + Math.abs(mid).toFixed(0) + " ms " + dir + "でした。\n" +
              "音ズレ調整を " + suggest + " ms にすると合わせやすくなります。";
     }
 
     function onSessionEnd(){
-      $("play").style.display = "none";
       const grade = calcGrade();
       $("gradeText").textContent = grade.g;
       $("gradeSub").textContent = grade.note;
@@ -752,18 +1060,15 @@
       $("resultBest").textContent = isNewBest
         ? "新記録！ ベストスコア " + rec.bestScore
         : "ベストスコア " + rec.bestScore + "（最大コンボ " + rec.bestCombo + "）";
-      const bias = biasText();
-      $("resultBias").textContent = bias;
-      $("resultBias").style.whiteSpace = "pre-line";
+      $("resultBias").textContent = biasText();
 
-      $("result").style.display = "flex";
+      show("result");
     }
 
-    function beginSession(){
+    function begin(){
+      Engine.reset();
       Sfx.unlock();
-      $("title").style.display = "none";
-      $("result").style.display = "none";
-      $("play").style.display = "flex";
+      show("play");
       $("countdownNum").classList.remove("show");
       $("ringTarget").classList.remove("hot");
       $("targetFill").style.opacity = "0";
@@ -777,12 +1082,15 @@
       $("scoreVal").textContent = "0";
       $("comboVal").textContent = "0";
 
+      Engine.on("frame", onFrame);
+      Engine.on("judged", onJudged);
+      Engine.on("sessionEnd", onSessionEnd);
       Engine.start({
         beats: beats,
         windows: { perfectMs:PERFECT_MS, goodMs:GOOD_MS },
         searchMs: SEARCH_MS,
         missWindowMs: MISS_MS,
-        userOffsetMs: userOffsetMs,
+        userOffsetMs: Settings.get(),
         onScheduleTick: Sfx.playTick
       });
     }
@@ -797,38 +1105,54 @@
         stage.insertBefore(el, $("ringTarget"));
         rings.push(el);
       }
-
-      Engine.on("frame", onFrame);
-      Engine.on("judged", onJudged);
-      Engine.on("sessionEnd", onSessionEnd);
-      Input.setHandler(function(ts){ Engine.judgeInput(ts); });
-      Input.bind($("play"));
-
-      userOffsetMs = loadOffset();
-      $("offsetRange").value = String(userOffsetMs);
-      $("offsetVal").textContent = String(userOffsetMs);
-      $("offsetRange").addEventListener("input", function(e){
-        userOffsetMs = Number(e.target.value) || 0;
-        $("offsetVal").textContent = String(userOffsetMs);
-        saveOffset(userOffsetMs);
-      });
-
-      $("startBtn").addEventListener("click", beginSession);
-      $("retryBtn").addEventListener("click", beginSession);
-      $("titleBtn").addEventListener("click", function(){
-        $("result").style.display = "none";
-        $("title").style.display = "flex";
-        paintBestLine();
-      });
-
+      Input.bindPointer($("play"));
       paintBestLine();
     }
 
-    return { mount };
+    return { mount, begin, paintBestLine };
   })();
 
+  /* =========================================================
+     7. 画面の行き来
+     ========================================================= */
+  function paintOffsetUI(){
+    $("offsetRange").value = String(Settings.get());
+    $("offsetVal").textContent = String(Settings.get());
+  }
+  function toTitle(){
+    Engine.reset();
+    RingGame.paintBestLine();
+    paintOffsetUI();
+    show("title");
+  }
+
+  Input.setHandler(function(ts){ Engine.judgeInput(ts); });
+  Input.bindKeys();
   RingGame.mount();
-  if(DEBUG) window.__engine = Engine;   // 動作検証（自動テスト）用のフック
+  Calibration.mount();
+  Settings.load();
+  paintOffsetUI();
+
+  $("offsetRange").addEventListener("input", function(e){
+    Settings.set(Number(e.target.value) || 0);
+    $("offsetVal").textContent = String(Settings.get());
+  });
+  // 初回だけ自動で計測をはさむ。2回目以降はそのまま始まる。
+  $("startBtn").addEventListener("click", function(){
+    Sfx.unlock();
+    if(Settings.isCalibrated()) RingGame.begin();
+    else Calibration.open(RingGame.begin);
+  });
+  $("calibBtn").addEventListener("click", function(){
+    Sfx.unlock();
+    Calibration.open(toTitle);
+  });
+  $("retryBtn").addEventListener("click", RingGame.begin);
+  $("titleBtn").addEventListener("click", toTitle);
+
+  show("title");
+
+  if(DEBUG){ window.__engine = Engine; window.__settings = Settings; }  // 動作検証用のフック
 
 })();
 </script>
