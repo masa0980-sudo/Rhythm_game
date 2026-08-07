@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>ぴったりリング</title>
+<style>
+  :root{
+    --bg0:#0a0d14; --bg1:#151b2b;
+    --accent:#5ad1ff; --accent2:#ffd166;
+    --ok:#3fa96b; --good:#e6c34d; --ng:#d8483f;
+    --line:rgba(255,255,255,.16);
+    --text:#f2f5fa;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    background:radial-gradient(120% 120% at 50% 0%,var(--bg1),var(--bg0) 72%);
+    color:var(--text);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",sans-serif;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+  }
+  #stage{position:relative;width:min(100vw,480px);height:min(100vh,880px);overflow:hidden;}
+
+  .btn{
+    margin-top:24px;cursor:pointer;user-select:none;border:none;
+    padding:15px 46px;font-size:18px;font-weight:800;letter-spacing:.14em;
+    color:#0a1420;border-radius:40px;
+    background:linear-gradient(90deg,var(--accent2),var(--accent));
+    box-shadow:0 0 26px rgba(90,209,255,.4);
+    transition:transform .12s,box-shadow .2s;
+  }
+  .btn:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 0 40px rgba(255,209,102,.5);}
+  .btn:active{transform:scale(.97);}
+  .btn.ghost{background:none;color:var(--text);border:1px solid var(--line);
+    box-shadow:none;font-size:14px;padding:11px 26px;letter-spacing:.08em;}
+  .btn.ghost:hover{background:rgba(255,255,255,.07);transform:none;box-shadow:none;}
+
+  /* ===== タイトル画面 ===== */
+  #title{
+    position:absolute;inset:0;z-index:30;padding:24px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  }
+  h1{
+    font-size:clamp(26px,7vw,36px);font-weight:900;letter-spacing:.05em;line-height:1.4;
+    background:linear-gradient(90deg,var(--accent2),var(--accent));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 16px rgba(90,209,255,.4));
+  }
+  .sub{margin-top:10px;font-size:12px;letter-spacing:.3em;color:var(--accent);opacity:.9;}
+  .rule{
+    margin:22px auto 0;max-width:340px;padding:16px 18px;border-radius:14px;
+    background:rgba(20,26,40,.66);border:1px solid var(--line);
+    font-size:13px;line-height:1.95;text-align:left;
+  }
+  .best{margin-top:16px;font-size:12.5px;opacity:.85;letter-spacing:.04em;}
+  .best b{color:var(--accent2);font-size:15px;}
+
+  /* ===== カウントダウン ===== */
+  #countdownNum{
+    position:absolute;inset:0;z-index:25;display:none;
+    align-items:center;justify-content:center;
+    font-size:96px;font-weight:900;color:var(--accent2);
+    text-shadow:0 0 30px rgba(255,209,102,.6);
+    pointer-events:none;
+  }
+  #countdownNum.show{display:flex;}
+  #countdownNum span{display:inline-block;animation:pop .32s ease-out;}
+  @keyframes pop{from{transform:scale(.4);opacity:0;}to{transform:scale(1);opacity:1;}}
+
+  /* ===== プレイ画面 ===== */
+  #play{display:none;flex-direction:column;height:100%;padding:16px 16px 20px;touch-action:none;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 14px;}
+  .logo{font-size:14px;font-weight:800;letter-spacing:.1em;color:var(--accent);}
+  .stat{font-size:12px;opacity:.85;text-align:right;}
+  .stat b{font-size:16px;color:var(--accent2);}
+  #progress{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;}
+  .pip{width:calc((100% - 23*4px)/24);height:5px;border-radius:3px;background:rgba(255,255,255,.14);}
+  .pip.ok{background:var(--ok);} .pip.ng{background:var(--ng);}
+
+  #ringStage{
+    position:relative;flex:1;display:flex;align-items:center;justify-content:center;
+    user-select:none;-webkit-user-select:none;
+  }
+  #ringTarget{
+    position:absolute;left:50%;top:50%;width:120px;height:120px;
+    transform:translate(-50%,-50%);
+    border:3px solid var(--accent2);border-radius:50%;
+    box-shadow:0 0 18px rgba(255,209,102,.35);
+    opacity:.9;
+  }
+  #ringOuter{
+    position:absolute;left:50%;top:50%;width:120px;height:120px;
+    transform:translate(-50%,-50%) scale(3);
+    border:3px solid var(--accent);border-radius:50%;
+    opacity:0;
+  }
+  #ringOuter.flare{
+    animation:flare .28s ease-out;
+  }
+  #ringOuter.flare.perfect{border-color:var(--accent2);}
+  #ringOuter.flare.good{border-color:var(--good);}
+  #ringOuter.flare.miss{border-color:var(--ng);}
+  @keyframes flare{
+    0%{transform:translate(-50%,-50%) scale(1);opacity:1;}
+    100%{transform:translate(-50%,-50%) scale(1.7);opacity:0;}
+  }
+  #judgeText{
+    position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);
+    font-size:26px;font-weight:900;letter-spacing:.06em;opacity:0;pointer-events:none;
+  }
+  #judgeText.show{animation:judgePop .55s ease-out;}
+  #judgeText.perfect{color:var(--accent2);}
+  #judgeText.good{color:var(--good);}
+  #judgeText.miss{color:var(--ng);}
+  @keyframes judgePop{
+    0%{opacity:0;transform:translate(-50%,-40%) scale(.7);}
+    18%{opacity:1;transform:translate(-50%,-50%) scale(1.08);}
+    70%{opacity:1;transform:translate(-50%,-50%) scale(1);}
+    100%{opacity:0;transform:translate(-50%,-60%) scale(1);}
+  }
+  #hint{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:12px;opacity:.55;}
+
+  /* ===== 結果 ===== */
+  #result{position:absolute;inset:0;z-index:40;display:none;
+    align-items:center;justify-content:center;padding:22px;
+    background:rgba(6,8,13,.88);backdrop-filter:blur(3px);}
+  .card{width:100%;max-width:340px;padding:26px 22px;border-radius:18px;text-align:center;
+    background:rgba(18,23,36,.97);border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.55);}
+  .card h2{font-size:44px;letter-spacing:.06em;margin-bottom:4px;color:var(--accent2);
+    text-shadow:0 0 22px rgba(255,209,102,.5);}
+  .card .sub2{font-size:13px;opacity:.85;margin-bottom:14px;}
+  .tally{font-size:13.5px;line-height:2.0;text-align:left;max-width:220px;margin:0 auto 6px;}
+  .tally span{float:right;font-weight:800;}
+  .tally .perfect{color:var(--accent2);} .tally .good{color:var(--good);} .tally .miss{color:var(--ng);}
+  .scoreLine{font-size:14px;margin:14px 0 2px;}
+  .scoreLine b{font-size:26px;color:var(--accent);}
+  .bestLine{font-size:12px;opacity:.75;margin-bottom:6px;}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ===== タイトル ===== -->
+  <div id="title">
+    <h1>ぴったり<br>リング</h1>
+    <div class="sub">RHYTHM TIMING GAME</div>
+    <div class="rule">
+      光るリングが縮んで、内側のリングに<br>
+      ぴったり重なった瞬間に<b>タップ / スペースキー</b>。<br>
+      テンポはだんだん上がり、後半は裏拍も出ます。<br>
+      全24拍でどれだけ正確に合わせられるか挑戦しよう。
+    </div>
+    <div class="best" id="bestLine">まだ記録がありません</div>
+    <button class="btn" id="startBtn">スタート</button>
+  </div>
+
+  <!-- ===== カウントダウン ===== -->
+  <div id="countdownNum"><span id="countdownLabel"></span></div>
+
+  <!-- ===== プレイ ===== -->
+  <div id="play">
+    <header>
+      <div class="logo">ぴったりリング</div>
+      <div class="stat">SCORE <b id="scoreVal">0</b>　COMBO <b id="comboVal">0</b></div>
+    </header>
+    <div id="progress"></div>
+    <div id="ringStage">
+      <div id="ringTarget"></div>
+      <div id="ringOuter"></div>
+      <div id="judgeText"></div>
+    </div>
+    <div id="hint">重なった瞬間にタップ / スペース</div>
+  </div>
+
+  <!-- ===== 結果 ===== -->
+  <div id="result">
+    <div class="card">
+      <h2 id="gradeText">A</h2>
+      <div class="sub2" id="gradeSub"></div>
+      <div class="tally">
+        <div class="perfect">PERFECT<span id="tallyPerfect">0</span></div>
+        <div class="good">GOOD<span id="tallyGood">0</span></div>
+        <div class="miss">MISS<span id="tallyMiss">0</span></div>
+      </div>
+      <div class="scoreLine">SCORE <b id="resultScore">0</b></div>
+      <div class="bestLine" id="resultBest"></div>
+      <button class="btn" id="retryBtn">もういちど</button>
+      <button class="btn ghost" id="titleBtn" style="margin-top:10px;">タイトルへ</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+
+  // ?debug=1 のとき、判定のたびに誤差(ms)を window.__rhythmDebug に記録する（動作検証用）
+  const DEBUG = /[?&]debug=1\b/.test(location.search);
+  if(DEBUG) window.__rhythmDebug = [];
+
+  /* =========================================================
+     1. Sfx — Web Audio API で音を生成する（外部音源ファイル不要）
+     ========================================================= */
+  const Sfx = (function(){
+    let ctx = null, master = null;
+
+    function ensure(){
+      if(!ctx){
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        master = ctx.createGain();
+        master.gain.value = 0.35;
+        master.connect(ctx.destination);
+      }
+      return ctx;
+    }
+    // ユーザー操作（スタートボタン押下）内で呼び、自動再生制限を解除する
+    function unlock(){
+      const c = ensure();
+      if(c.state === "suspended") c.resume();
+      return c;
+    }
+
+    function tone(at, opt){
+      const c = ensure();
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      osc.type = opt.type || "sine";
+      osc.frequency.setValueAtTime(opt.freq, at);
+      if(opt.freqEnd != null){
+        osc.frequency.exponentialRampToValueAtTime(opt.freqEnd, at + opt.dur);
+      }
+      const peak = opt.peak != null ? opt.peak : 0.25;
+      const dur  = opt.dur  != null ? opt.dur  : 0.08;
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(peak, at + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      osc.connect(g); g.connect(master);
+      osc.start(at);
+      osc.stop(at + dur + 0.03);
+    }
+
+    // Engine がビートをスケジュールした「まさにその時刻」に鳴らす（先読みスケジューラから呼ばれる）
+    function playTick(beat, time){
+      ensure();
+      if(beat.isCountdown){
+        tone(time, { type:"square", freq: beat.label === "GO!" ? 1500 : 900, dur:0.09, peak:0.26 });
+        return;
+      }
+      // 強拍（gapQN>=1）のみクリック音を鳴らし、裏拍は音を出さずリングの見た目だけで示す
+      if(beat.isHit && beat.gapQN >= 1){
+        tone(time, { type:"triangle", freq:880, dur:0.05, peak:0.14 });
+      }
+    }
+
+    function judgeSfx(verdict){
+      const c = ensure();
+      const t = c.currentTime;
+      if(verdict === "perfect"){
+        tone(t,        { type:"sine", freq:1046.5, dur:0.16, peak:0.3 });
+        tone(t + 0.03, { type:"sine", freq:1318.5, dur:0.16, peak:0.24 });
+      }else if(verdict === "good"){
+        tone(t, { type:"sine", freq:659.3, dur:0.12, peak:0.2 });
+      }else{
+        tone(t, { type:"sawtooth", freq:220, freqEnd:120, dur:0.18, peak:0.2 });
+      }
+    }
+
+    return { unlock, playTick, judgeSfx };
+  })();
+
+  /* =========================================================
+     2. Engine — 汎用のリズム・スケジューラ（DOMやゲーム固有ルールを知らない）
+        将来ちがうミニゲームを作るときも、beats配列と judged/sessionEnd の
+        イベント購読だけ差し替えれば使い回せる。
+     ========================================================= */
+  const Engine = (function(){
+    const SCHEDULE_AHEAD = 0.15;  // 秒: この時間分だけ先読みして音を予約する
+    const LOOKAHEAD_MS   = 25;    // ポーリング間隔（タイミングの正確さ自体はここに依存しない）
+
+    let cfg = null;
+    let beats = [];
+    let idx = 0, nextTime = 0, timerID = null, running = false, ended = false;
+    let audioOffset = 0;
+    const hitQueue = [];
+    const listeners = {};
+
+    function on(evt, cb){ (listeners[evt] = listeners[evt] || []).push(cb); }
+    function emit(evt, payload){ (listeners[evt] || []).forEach(fn => fn(payload)); }
+
+    function schedulerLoop(){
+      const c = Sfx.unlock();
+      while(idx < beats.length && nextTime < c.currentTime + SCHEDULE_AHEAD){
+        const b = beats[idx];
+        b.time = nextTime;                       // Engine がビート記述オブジェクトに確定時刻を書き込む
+        cfg.onScheduleTick(b, nextTime);
+        if(b.isHit) hitQueue.push({ i:idx, time:nextTime, judged:false, verdict:null });
+        emit("scheduled", { i:idx, beat:b, time:nextTime });
+        nextTime += (60 / b.bpm) * b.gapQN;
+        idx++;
+      }
+      if(idx >= beats.length && !ended){
+        ended = true;
+        clearInterval(timerID);
+        const lastTime = beats[beats.length - 1].time;
+        const waitMs = Math.max(0, (lastTime + cfg.missWindowMs/1000) - c.currentTime) * 1000 + 150;
+        setTimeout(finalizeSession, waitMs);
+      }
+    }
+
+    function resolveAutoMisses(now){
+      for(let k=0;k<hitQueue.length;k++){
+        const h = hitQueue[k];
+        if(!h.judged && now > h.time + cfg.missWindowMs/1000){
+          h.judged = true; h.verdict = "miss";
+          emit("judged", { i:h.i, verdict:"miss", deltaMs:null });
+        }
+      }
+    }
+
+    function rafLoop(){
+      if(!running) return;
+      const c = Sfx.unlock();
+      const now = c.currentTime;
+      audioOffset = now - performance.now()/1000;
+      resolveAutoMisses(now);
+      emit("frame", { now });
+      requestAnimationFrame(rafLoop);
+    }
+
+    function finalizeSession(){
+      running = false;
+      clearInterval(timerID);
+      emit("sessionEnd", {});
+    }
+
+    function start(newCfg){
+      const c = Sfx.unlock();
+      cfg = newCfg;
+      beats = cfg.beats;
+      idx = 0; hitQueue.length = 0; running = true; ended = false;
+      nextTime = c.currentTime + 0.15;
+      schedulerLoop();
+      timerID = setInterval(schedulerLoop, LOOKAHEAD_MS);
+      requestAnimationFrame(rafLoop);
+    }
+
+    function judgeInput(rawTimeStampMs){
+      if(!running) return;
+      const tapTime = rawTimeStampMs/1000 + audioOffset;
+      let best = null, bestAbs = Infinity, bestDelta = 0;
+      for(let k=0;k<hitQueue.length;k++){
+        const h = hitQueue[k];
+        if(h.judged) continue;
+        const d = (tapTime - h.time) * 1000;
+        if(Math.abs(d) < bestAbs){ bestAbs = Math.abs(d); best = h; bestDelta = d; }
+      }
+      if(!best || bestAbs > cfg.searchMs){
+        emit("whiff", {});
+        return;
+      }
+      best.judged = true;
+      const verdict = bestAbs <= cfg.windows.perfectMs ? "perfect"
+                     : bestAbs <= cfg.windows.goodMs    ? "good"
+                     : "miss";
+      best.verdict = verdict;
+      if(DEBUG) window.__rhythmDebug.push({ i:best.i, deltaMs:bestDelta, verdict });
+      emit("judged", { i:best.i, verdict, deltaMs:bestDelta });
+    }
+
+    // まだ判定されていない、いちばん近いヒート拍を返す（描画用）
+    function peekNextHit(){
+      for(let k=0;k<hitQueue.length;k++){
+        if(!hitQueue[k].judged) return hitQueue[k];
+      }
+      return null;
+    }
+
+    function isRunning(){ return running; }
+    function now(){ return Sfx.unlock().currentTime; }
+
+    return { on, start, judgeInput, peekNextHit, isRunning, now };
+  })();
+
+  /* =========================================================
+     3. Input — キーボード / クリック / タップ入力を統一し、二重発火を防ぐ
+     ========================================================= */
+  const Input = (function(){
+    let handler = null;
+    let lastTouchAt = 0;
+
+    function setHandler(fn){ handler = fn; }
+    function fire(timeStamp){ if(handler) handler(timeStamp); }
+
+    function bind(el){
+      el.addEventListener("touchstart", function(e){
+        e.preventDefault();               // スクロール/ズーム & 合成clickの抑止
+        lastTouchAt = performance.now();
+        fire(e.timeStamp);
+      }, { passive:false });
+
+      el.addEventListener("click", function(e){
+        if(performance.now() - lastTouchAt < 500) return;  // touch直後の合成clickは無視
+        fire(e.timeStamp);
+      });
+
+      document.addEventListener("keydown", function(e){
+        if(e.code !== "Space" || e.repeat) return;
+        if(!Engine.isRunning()) return;   // プレイ中以外はスペースの既定動作を邪魔しない
+        e.preventDefault();
+        fire(e.timeStamp);
+      });
+    }
+
+    return { bind, setHandler };
+  })();
+
+  /* =========================================================
+     4. RingGame — 「ぴったりリング」ミニゲーム固有のロジックと見た目
+     ========================================================= */
+  const RingGame = (function(){
+    const PERFECT_MS = 30, GOOD_MS = 80, SEARCH_MS = 150, MISS_MS = 100;
+    const PHRASES = [
+      { bpm:100, pattern:"straight" },
+      { bpm:108, pattern:"straight" },
+      { bpm:116, pattern:"synco"    }
+    ];
+    const COUNTDOWN_BPM = 100;
+    const HIT_TOTAL = PHRASES.length * 8;
+    const BEST_KEY = "rhythm-ring-best";
+
+    let beats = [];
+    let stats = null;
+    let els = {};
+
+    function buildBeats(){
+      const list = [];
+      for(let i=0;i<4;i++){
+        list.push({ bpm:COUNTDOWN_BPM, gapQN:1, isHit:false, isCountdown:true,
+                     label: i<3 ? String(3-i) : "GO!" });
+      }
+      PHRASES.forEach(function(ph){
+        if(ph.pattern === "straight"){
+          for(let k=0;k<8;k++) list.push({ bpm:ph.bpm, gapQN:1, isHit:true });
+        }else{
+          const gaps = [1,0.5,0.5,1,1,0.5,0.5,1];
+          for(let k=0;k<8;k++) list.push({ bpm:ph.bpm, gapQN:gaps[k], isHit:true });
+        }
+      });
+      return list;
+    }
+
+    function loadBest(){
+      try{ return JSON.parse(localStorage.getItem(BEST_KEY) || "null"); }catch(e){ return null; }
+    }
+    function saveBest(rec){
+      try{ localStorage.setItem(BEST_KEY, JSON.stringify(rec)); }catch(e){}
+    }
+    function paintBestLine(){
+      const best = loadBest();
+      $("bestLine").innerHTML = best
+        ? "ベストスコア　<b>" + best.bestScore + "</b>　最大コンボ " + best.bestCombo
+        : "まだ記録がありません";
+    }
+
+    function resetProgress(){
+      const box = $("progress");
+      box.innerHTML = "";
+      for(let i=0;i<HIT_TOTAL;i++){
+        const p = document.createElement("div");
+        p.className = "pip";
+        box.appendChild(p);
+      }
+    }
+    function paintPip(hitOrder, ok){
+      const box = $("progress");
+      if(box.children[hitOrder]) box.children[hitOrder].className = "pip " + (ok ? "ok" : "ng");
+    }
+
+    function showJudgeText(verdict){
+      const el = $("judgeText");
+      el.className = "";                 // アニメーションを再生しなおすためリセット
+      void el.offsetWidth;                // reflow を挟んで再トリガー
+      el.textContent = verdict === "perfect" ? "PERFECT!" : verdict === "good" ? "GOOD" : "MISS";
+      el.className = "show " + verdict;
+    }
+    function flareRing(verdict){
+      const el = $("ringOuter");
+      el.classList.remove("flare","perfect","good","miss");
+      void el.offsetWidth;
+      el.classList.add("flare", verdict);
+    }
+
+    function onFrame(){
+      const now = Engine.now();
+      const goBeat = beats[3];
+      if(typeof goBeat.time !== "number" || now < goBeat.time + 0.25){
+        let activeIdx = -1;
+        for(let i=0;i<4;i++){
+          if(typeof beats[i].time === "number" && beats[i].time <= now) activeIdx = i;
+        }
+        $("countdownNum").classList.add("show");
+        $("ringStage").style.opacity = "0";
+        if(activeIdx >= 0){
+          const lbl = beats[activeIdx].label;
+          if($("countdownLabel").textContent !== lbl) $("countdownLabel").textContent = lbl;
+        }
+        return;
+      }
+      $("countdownNum").classList.remove("show");
+      $("ringStage").style.opacity = "1";
+
+      const next = Engine.peekNextHit();
+      const ring = $("ringOuter");
+      if(!next){ ring.style.opacity = "0"; return; }
+      const beat = beats[next.i];
+      if(typeof beat.time !== "number"){ ring.style.opacity = "0"; return; }
+
+      const approach = clamp((60/beat.bpm) * beat.gapQN, 0.35, 1.0);
+      const t0 = beat.time - approach;
+      if(now < t0 - 0.05){ ring.style.opacity = "0"; return; }
+
+      const progress = clamp((now - t0)/approach, 0, 1.2);
+      const scale = 3 - 2 * Math.min(progress, 1);
+      ring.style.opacity = "1";
+      ring.style.transform = "translate(-50%,-50%) scale(" + scale.toFixed(3) + ")";
+    }
+
+    function onJudged(payload){
+      const order = payload.i - 4;   // beats配列上の位置 -&gt; 何番目のヒート拍か（先頭4つはカウントダウン）
+      if(payload.verdict === "perfect") stats.perfect++;
+      else if(payload.verdict === "good") stats.good++;
+      else stats.miss++;
+
+      if(payload.verdict === "miss"){
+        stats.combo = 0;
+      }else{
+        stats.combo++;
+        stats.maxCombo = Math.max(stats.maxCombo, stats.combo);
+        stats.score += payload.verdict === "perfect" ? 100 : 50;
+      }
+      paintPip(order, payload.verdict !== "miss");
+      $("scoreVal").textContent = stats.score;
+      $("comboVal").textContent = stats.combo;
+      showJudgeText(payload.verdict);
+      flareRing(payload.verdict);
+      Sfx.judgeSfx(payload.verdict);
+    }
+
+    function calcGrade(){
+      const total = stats.perfect + stats.good + stats.miss;
+      const perfectRatio = stats.perfect / total;
+      const okRatio = (stats.perfect + stats.good) / total;
+      if(perfectRatio >= 0.9 && stats.miss === 0) return { g:"S", note:"ほぼ完璧なタイミング！" };
+      if(okRatio >= 0.9) return { g:"A", note:"かなり良いリズム感！" };
+      if(okRatio >= 0.7) return { g:"B", note:"いい調子！" };
+      return { g:"C", note:"また挑戦してみよう" };
+    }
+
+    function onSessionEnd(){
+      $("play").style.display = "none";
+      const grade = calcGrade();
+      $("gradeText").textContent = grade.g;
+      $("gradeSub").textContent = grade.note;
+      $("tallyPerfect").textContent = stats.perfect;
+      $("tallyGood").textContent = stats.good;
+      $("tallyMiss").textContent = stats.miss;
+      $("resultScore").textContent = stats.score;
+
+      const prevBest = loadBest();
+      const isNewBest = !prevBest || stats.score > prevBest.bestScore;
+      const rec = {
+        bestScore: isNewBest ? stats.score : prevBest.bestScore,
+        bestCombo: Math.max(stats.maxCombo, prevBest ? prevBest.bestCombo : 0),
+        playCount: (prevBest ? prevBest.playCount : 0) + 1
+      };
+      saveBest(rec);
+      $("resultBest").textContent = isNewBest
+        ? "新記録！ ベストスコア " + rec.bestScore
+        : "ベストスコア " + rec.bestScore + "（最大コンボ " + rec.bestCombo + "）";
+
+      $("result").style.display = "flex";
+    }
+
+    function beginSession(){
+      Sfx.unlock();
+      $("title").style.display = "none";
+      $("result").style.display = "none";
+      $("play").style.display = "flex";
+      $("ringStage").style.opacity = "0";
+      $("ringOuter").style.opacity = "0";
+      $("countdownNum").classList.remove("show");
+
+      stats = { perfect:0, good:0, miss:0, combo:0, maxCombo:0, score:0 };
+      beats = buildBeats();
+      resetProgress();
+      $("scoreVal").textContent = "0";
+      $("comboVal").textContent = "0";
+
+      Engine.start({
+        beats: beats,
+        windows: { perfectMs:PERFECT_MS, goodMs:GOOD_MS },
+        searchMs: SEARCH_MS,
+        missWindowMs: MISS_MS,
+        onScheduleTick: Sfx.playTick
+      });
+    }
+
+    function mount(){
+      els.stage = $("stage");
+      Engine.on("frame", onFrame);
+      Engine.on("judged", onJudged);
+      Engine.on("sessionEnd", onSessionEnd);
+      Input.setHandler(function(ts){ Engine.judgeInput(ts); });
+      Input.bind($("play"));
+
+      $("startBtn").addEventListener("click", beginSession);
+      $("retryBtn").addEventListener("click", beginSession);
+      $("titleBtn").addEventListener("click", function(){
+        $("result").style.display = "none";
+        $("title").style.display = "flex";
+        paintBestLine();
+      });
+
+      paintBestLine();
+    }
+
+    return { mount };
+  })();
+
+  RingGame.mount();
+  if(DEBUG) window.__engine = Engine;   // 動作検証（自動テスト）用のフック
+
+})();
+</script>
+</body>
+</html>
