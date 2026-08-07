@@ -23,7 +23,7 @@
   #stage{position:relative;width:min(100vw,480px);height:min(100vh,880px);overflow:hidden;}
 
   .btn{
-    margin-top:24px;cursor:pointer;user-select:none;border:none;
+    margin-top:20px;cursor:pointer;user-select:none;border:none;
     padding:15px 46px;font-size:18px;font-weight:800;letter-spacing:.14em;
     color:#0a1420;border-radius:40px;
     background:linear-gradient(90deg,var(--accent2),var(--accent));
@@ -38,43 +38,41 @@
 
   /* ===== タイトル画面 ===== */
   #title{
-    position:absolute;inset:0;z-index:30;padding:24px;
+    position:absolute;inset:0;z-index:30;padding:20px;
     display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+    overflow-y:auto;
   }
   h1{
-    font-size:clamp(26px,7vw,36px);font-weight:900;letter-spacing:.05em;line-height:1.4;
+    font-size:clamp(24px,6.4vw,34px);font-weight:900;letter-spacing:.05em;line-height:1.4;
     background:linear-gradient(90deg,var(--accent2),var(--accent));
     -webkit-background-clip:text;background-clip:text;color:transparent;
     filter:drop-shadow(0 0 16px rgba(90,209,255,.4));
   }
-  .sub{margin-top:10px;font-size:12px;letter-spacing:.3em;color:var(--accent);opacity:.9;}
+  .sub{margin-top:8px;font-size:12px;letter-spacing:.3em;color:var(--accent);opacity:.9;}
   .rule{
-    margin:22px auto 0;max-width:340px;padding:16px 18px;border-radius:14px;
+    margin:18px auto 0;max-width:340px;padding:14px 16px;border-radius:14px;
     background:rgba(20,26,40,.66);border:1px solid var(--line);
-    font-size:13px;line-height:1.95;text-align:left;
+    font-size:13px;line-height:1.9;text-align:left;
   }
-  .best{margin-top:16px;font-size:12.5px;opacity:.85;letter-spacing:.04em;}
+  .rule b{color:var(--accent2);}
+  .best{margin-top:14px;font-size:12.5px;opacity:.85;letter-spacing:.04em;}
   .best b{color:var(--accent2);font-size:15px;}
 
-  /* ===== カウントダウン ===== */
-  #countdownNum{
-    position:absolute;inset:0;z-index:25;display:none;
-    align-items:center;justify-content:center;
-    font-size:96px;font-weight:900;color:var(--accent2);
-    text-shadow:0 0 30px rgba(255,209,102,.6);
-    pointer-events:none;
-  }
-  #countdownNum.show{display:flex;}
-  #countdownNum span{display:inline-block;animation:pop .32s ease-out;}
-  @keyframes pop{from{transform:scale(.4);opacity:0;}to{transform:scale(1);opacity:1;}}
+  /* 音ズレ調整 */
+  .opt{margin:16px auto 0;max-width:340px;padding:12px 16px;border-radius:14px;
+    background:rgba(20,26,40,.5);border:1px solid var(--line);text-align:left;}
+  .opt .optHead{font-size:12.5px;font-weight:800;letter-spacing:.05em;}
+  .opt .optHead span{color:var(--accent2);}
+  .opt input[type=range]{width:100%;margin:8px 0 4px;accent-color:var(--accent);}
+  .optNote{font-size:11px;line-height:1.7;opacity:.7;}
 
   /* ===== プレイ画面 ===== */
   #play{display:none;flex-direction:column;height:100%;padding:16px 16px 20px;touch-action:none;}
-  header{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 14px;}
+  header{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 12px;}
   .logo{font-size:14px;font-weight:800;letter-spacing:.1em;color:var(--accent);}
   .stat{font-size:12px;opacity:.85;text-align:right;}
   .stat b{font-size:16px;color:var(--accent2);}
-  #progress{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px;}
+  #progress{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;}
   .pip{width:calc((100% - 23*4px)/24);height:5px;border-radius:3px;background:rgba(255,255,255,.14);}
   .pip.ok{background:var(--ok);} .pip.ng{background:var(--ng);}
 
@@ -82,34 +80,62 @@
     position:relative;flex:1;display:flex;align-items:center;justify-content:center;
     user-select:none;-webkit-user-select:none;
   }
+  /* 中央の的。拍ごとに脈打ち、押すべき瞬間が近づくと光る */
   #ringTarget{
-    position:absolute;left:50%;top:50%;width:120px;height:120px;
+    position:absolute;left:50%;top:50%;width:104px;height:104px;
     transform:translate(-50%,-50%);
-    border:3px solid var(--accent2);border-radius:50%;
-    box-shadow:0 0 18px rgba(255,209,102,.35);
-    opacity:.9;
+    border:4px solid var(--accent2);border-radius:50%;
+    box-shadow:0 0 14px rgba(255,209,102,.3);
+    transition:box-shadow .08s, border-color .08s;
   }
-  #ringOuter{
-    position:absolute;left:50%;top:50%;width:120px;height:120px;
-    transform:translate(-50%,-50%) scale(3);
+  #ringTarget.pulse{animation:tpulse .18s ease-out;}
+  @keyframes tpulse{
+    0%{transform:translate(-50%,-50%) scale(1.14);}
+    100%{transform:translate(-50%,-50%) scale(1);}
+  }
+  /* 「いま押す」窓に入ったら的が強く光る＝押すタイミングの合図 */
+  #ringTarget.hot{
+    border-color:#fff;
+    box-shadow:0 0 34px rgba(255,255,255,.85), 0 0 60px rgba(255,209,102,.5);
+  }
+  /* 的の内側の塗り。リングが近づくほど濃くなる＝距離が直感的に分かる */
+  #targetFill{
+    position:absolute;left:50%;top:50%;width:104px;height:104px;
+    transform:translate(-50%,-50%);border-radius:50%;
+    background:var(--accent2);opacity:0;pointer-events:none;
+  }
+  /* 迫ってくるリング。同時に複数表示して、これから来るリズムを見せる */
+  .approach{
+    position:absolute;left:50%;top:50%;width:104px;height:104px;
+    transform:translate(-50%,-50%) scale(4);
     border:3px solid var(--accent);border-radius:50%;
-    opacity:0;
+    opacity:0;pointer-events:none;
   }
-  #ringOuter.flare{
-    animation:flare .28s ease-out;
+  .approach.lead{border-width:5px;box-shadow:0 0 18px rgba(90,209,255,.55);}
+  /* 裏拍のリングは色を変えて、拍子の違いが一目で分かるようにする */
+  .approach.off{border-color:#c68cff;}
+  .approach.off.lead{box-shadow:0 0 18px rgba(198,140,255,.55);}
+
+  #flare{
+    position:absolute;left:50%;top:50%;width:104px;height:104px;
+    transform:translate(-50%,-50%) scale(1);
+    border:4px solid var(--accent2);border-radius:50%;opacity:0;pointer-events:none;
   }
-  #ringOuter.flare.perfect{border-color:var(--accent2);}
-  #ringOuter.flare.good{border-color:var(--good);}
-  #ringOuter.flare.miss{border-color:var(--ng);}
+  #flare.go{animation:flare .3s ease-out;}
+  #flare.perfect{border-color:var(--accent2);}
+  #flare.good{border-color:var(--good);}
+  #flare.miss{border-color:var(--ng);}
   @keyframes flare{
     0%{transform:translate(-50%,-50%) scale(1);opacity:1;}
-    100%{transform:translate(-50%,-50%) scale(1.7);opacity:0;}
+    100%{transform:translate(-50%,-50%) scale(1.9);opacity:0;}
   }
+
   #judgeText{
-    position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);
+    position:absolute;left:50%;top:26%;transform:translate(-50%,-50%);
     font-size:26px;font-weight:900;letter-spacing:.06em;opacity:0;pointer-events:none;
+    white-space:nowrap;
   }
-  #judgeText.show{animation:judgePop .55s ease-out;}
+  #judgeText.show{animation:judgePop .6s ease-out;}
   #judgeText.perfect{color:var(--accent2);}
   #judgeText.good{color:var(--good);}
   #judgeText.miss{color:var(--ng);}
@@ -119,13 +145,38 @@
     70%{opacity:1;transform:translate(-50%,-50%) scale(1);}
     100%{opacity:0;transform:translate(-50%,-60%) scale(1);}
   }
+  /* はやい/おそいのズレ量メーター。中央が0msで、押した位置に印が出る */
+  #meter{
+    position:absolute;left:50%;bottom:44px;transform:translateX(-50%);
+    width:70%;max-width:280px;height:26px;
+  }
+  #meterBar{position:absolute;top:11px;left:0;right:0;height:4px;border-radius:2px;
+    background:linear-gradient(90deg,rgba(216,72,63,.5),rgba(230,195,77,.55),rgba(255,209,102,.9),rgba(230,195,77,.55),rgba(216,72,63,.5));}
+  #meterCenter{position:absolute;top:5px;left:50%;width:2px;height:16px;
+    background:#fff;opacity:.75;transform:translateX(-50%);}
+  #meterMark{position:absolute;top:2px;left:50%;width:4px;height:22px;border-radius:2px;
+    background:#fff;transform:translateX(-50%);opacity:0;transition:left .08s, opacity .25s;}
+  #meterLabels{position:absolute;top:-2px;left:0;right:0;display:flex;justify-content:space-between;
+    font-size:10px;opacity:.5;}
+
+  #countdownNum{
+    position:absolute;inset:0;display:none;
+    align-items:center;justify-content:center;
+    font-size:88px;font-weight:900;color:var(--accent2);
+    text-shadow:0 0 30px rgba(255,209,102,.6);
+    pointer-events:none;
+  }
+  #countdownNum.show{display:flex;}
+  #countdownNum span{display:inline-block;animation:pop .3s ease-out;}
+  @keyframes pop{from{transform:scale(.4);opacity:0;}to{transform:scale(1);opacity:1;}}
+
   #hint{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:12px;opacity:.55;}
 
   /* ===== 結果 ===== */
   #result{position:absolute;inset:0;z-index:40;display:none;
     align-items:center;justify-content:center;padding:22px;
     background:rgba(6,8,13,.88);backdrop-filter:blur(3px);}
-  .card{width:100%;max-width:340px;padding:26px 22px;border-radius:18px;text-align:center;
+  .card{width:100%;max-width:340px;padding:24px 22px;border-radius:18px;text-align:center;
     background:rgba(18,23,36,.97);border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.55);}
   .card h2{font-size:44px;letter-spacing:.06em;margin-bottom:4px;color:var(--accent2);
     text-shadow:0 0 22px rgba(255,209,102,.5);}
@@ -133,9 +184,11 @@
   .tally{font-size:13.5px;line-height:2.0;text-align:left;max-width:220px;margin:0 auto 6px;}
   .tally span{float:right;font-weight:800;}
   .tally .perfect{color:var(--accent2);} .tally .good{color:var(--good);} .tally .miss{color:var(--ng);}
-  .scoreLine{font-size:14px;margin:14px 0 2px;}
+  .scoreLine{font-size:14px;margin:12px 0 2px;}
   .scoreLine b{font-size:26px;color:var(--accent);}
-  .bestLine{font-size:12px;opacity:.75;margin-bottom:6px;}
+  .bestLine{font-size:12px;opacity:.75;margin-bottom:4px;}
+  /* 平均してどれだけ早い/遅いかを伝え、音ズレ調整の目安にしてもらう */
+  .biasLine{font-size:12px;line-height:1.7;opacity:.9;margin:8px 0 0;color:var(--accent);}
 </style>
 </head>
 <body>
@@ -146,17 +199,21 @@
     <h1>ぴったり<br>リング</h1>
     <div class="sub">RHYTHM TIMING GAME</div>
     <div class="rule">
-      光るリングが縮んで、内側のリングに<br>
-      ぴったり重なった瞬間に<b>タップ / スペースキー</b>。<br>
-      テンポはだんだん上がり、後半は裏拍も出ます。<br>
-      全24拍でどれだけ正確に合わせられるか挑戦しよう。
+      青いリングが縮んできて、<b>まん中の輪に重なった瞬間</b>にタップ / スペースキー。<br>
+      重なる直前に<b>まん中が白く光る</b>ので、光ったら押すつもりでOK。<br>
+      <b>紫のリングは裏拍</b>です。カチッという音も目印になります。
+    </div>
+    <div class="opt">
+      <div class="optHead">音ズレ調整　<span id="offsetVal">0</span> ms</div>
+      <input type="range" id="offsetRange" min="-200" max="200" step="5" value="0">
+      <div class="optNote">
+        ちゃんと合わせたのに「おそい」と出るなら ＋ 側、「はやい」と出るなら − 側へ。
+        結果画面に平均のズレが出るので、それを目安にしてください。
+      </div>
     </div>
     <div class="best" id="bestLine">まだ記録がありません</div>
     <button class="btn" id="startBtn">スタート</button>
   </div>
-
-  <!-- ===== カウントダウン ===== -->
-  <div id="countdownNum"><span id="countdownLabel"></span></div>
 
   <!-- ===== プレイ ===== -->
   <div id="play">
@@ -166,9 +223,17 @@
     </header>
     <div id="progress"></div>
     <div id="ringStage">
+      <div id="targetFill"></div>
       <div id="ringTarget"></div>
-      <div id="ringOuter"></div>
+      <div id="flare"></div>
       <div id="judgeText"></div>
+      <div id="meter">
+        <div id="meterLabels"><span>はやい</span><span>ぴったり</span><span>おそい</span></div>
+        <div id="meterBar"></div>
+        <div id="meterCenter"></div>
+        <div id="meterMark"></div>
+      </div>
+      <div id="countdownNum"><span id="countdownLabel"></span></div>
     </div>
     <div id="hint">重なった瞬間にタップ / スペース</div>
   </div>
@@ -185,6 +250,7 @@
       </div>
       <div class="scoreLine">SCORE <b id="resultScore">0</b></div>
       <div class="bestLine" id="resultBest"></div>
+      <div class="biasLine" id="resultBias"></div>
       <button class="btn" id="retryBtn">もういちど</button>
       <button class="btn ghost" id="titleBtn" style="margin-top:10px;">タイトルへ</button>
     </div>
@@ -224,6 +290,17 @@
       return c;
     }
 
+    // スピーカーから実際に音が出るまでの遅れ。
+    // 予定時刻に「鳴らす」よう指示しても、耳に届くのはこの分だけあと。
+    // プレイヤーは聞こえた音に合わせて押すので、判定も表示もこの遅れを足した
+    // 時刻を基準にしないと、正しく押しても早い判定になってしまう。
+    function latency(){
+      const c = ensure();
+      const out = (typeof c.outputLatency === "number" && c.outputLatency > 0) ? c.outputLatency : 0;
+      const base = (typeof c.baseLatency === "number" && c.baseLatency > 0) ? c.baseLatency : 0;
+      return out || base || 0;
+    }
+
     function tone(at, opt){
       const c = ensure();
       const osc = c.createOscillator();
@@ -244,15 +321,18 @@
     }
 
     // Engine がビートをスケジュールした「まさにその時刻」に鳴らす（先読みスケジューラから呼ばれる）
+    // 押すべき拍はすべて音を鳴らす。裏拍だけ音色を変えて聞き分けられるようにする。
     function playTick(beat, time){
       ensure();
       if(beat.isCountdown){
-        tone(time, { type:"square", freq: beat.label === "GO!" ? 1500 : 900, dur:0.09, peak:0.26 });
+        tone(time, { type:"square", freq: beat.accent ? 1400 : 900, dur:0.08, peak:0.24 });
         return;
       }
-      // 強拍（gapQN>=1）のみクリック音を鳴らし、裏拍は音を出さずリングの見た目だけで示す
-      if(beat.isHit && beat.gapQN >= 1){
-        tone(time, { type:"triangle", freq:880, dur:0.05, peak:0.14 });
+      if(!beat.isHit) return;
+      if(beat.isOff){
+        tone(time, { type:"triangle", freq:1320, dur:0.045, peak:0.13 });
+      }else{
+        tone(time, { type:"triangle", freq:880, dur:0.055, peak:0.17 });
       }
     }
 
@@ -269,7 +349,7 @@
       }
     }
 
-    return { unlock, playTick, judgeSfx };
+    return { unlock, latency, playTick, judgeSfx };
   })();
 
   /* =========================================================
@@ -278,27 +358,34 @@
         イベント購読だけ差し替えれば使い回せる。
      ========================================================= */
   const Engine = (function(){
-    const SCHEDULE_AHEAD = 0.15;  // 秒: この時間分だけ先読みして音を予約する
-    const LOOKAHEAD_MS   = 25;    // ポーリング間隔（タイミングの正確さ自体はここに依存しない）
+    // 迫ってくるリングを先の拍まで見せたいので、音の予約もその分だけ先まで進めておく。
+    // （実際の発音は OscillatorNode が正確な時刻に行うので、先に予約しても音はズレない）
+    const SCHEDULE_AHEAD = 2.5;
+    const LOOKAHEAD_MS   = 25;
 
     let cfg = null;
     let beats = [];
     let idx = 0, nextTime = 0, timerID = null, running = false, ended = false;
     let audioOffset = 0;
+    let userOffset = 0;            // 秒。プレイヤーが手動で調整するズレ
     const hitQueue = [];
     const listeners = {};
 
     function on(evt, cb){ (listeners[evt] = listeners[evt] || []).push(cb); }
     function emit(evt, payload){ (listeners[evt] || []).forEach(fn => fn(payload)); }
 
+    // 「プレイヤーが拍だと感じる時刻」。出力遅延と手動調整を足したもの。
+    // 判定も描画もすべてこの時刻を基準にすることで、音・見た目・判定が一致する。
+    function offset(){ return Sfx.latency() + userOffset; }
+    function perceived(t){ return t + offset(); }
+
     function schedulerLoop(){
       const c = Sfx.unlock();
       while(idx < beats.length && nextTime < c.currentTime + SCHEDULE_AHEAD){
         const b = beats[idx];
-        b.time = nextTime;                       // Engine がビート記述オブジェクトに確定時刻を書き込む
+        b.time = nextTime;
         cfg.onScheduleTick(b, nextTime);
         if(b.isHit) hitQueue.push({ i:idx, time:nextTime, judged:false, verdict:null });
-        emit("scheduled", { i:idx, beat:b, time:nextTime });
         nextTime += (60 / b.bpm) * b.gapQN;
         idx++;
       }
@@ -306,7 +393,7 @@
         ended = true;
         clearInterval(timerID);
         const lastTime = beats[beats.length - 1].time;
-        const waitMs = Math.max(0, (lastTime + cfg.missWindowMs/1000) - c.currentTime) * 1000 + 150;
+        const waitMs = Math.max(0, (perceived(lastTime) + cfg.missWindowMs/1000) - c.currentTime) * 1000 + 200;
         setTimeout(finalizeSession, waitMs);
       }
     }
@@ -314,7 +401,7 @@
     function resolveAutoMisses(now){
       for(let k=0;k<hitQueue.length;k++){
         const h = hitQueue[k];
-        if(!h.judged && now > h.time + cfg.missWindowMs/1000){
+        if(!h.judged && now > perceived(h.time) + cfg.missWindowMs/1000){
           h.judged = true; h.verdict = "miss";
           emit("judged", { i:h.i, verdict:"miss", deltaMs:null });
         }
@@ -341,8 +428,9 @@
       const c = Sfx.unlock();
       cfg = newCfg;
       beats = cfg.beats;
+      userOffset = (cfg.userOffsetMs || 0) / 1000;
       idx = 0; hitQueue.length = 0; running = true; ended = false;
-      nextTime = c.currentTime + 0.15;
+      nextTime = c.currentTime + 0.2;
       schedulerLoop();
       timerID = setInterval(schedulerLoop, LOOKAHEAD_MS);
       requestAnimationFrame(rafLoop);
@@ -355,13 +443,10 @@
       for(let k=0;k<hitQueue.length;k++){
         const h = hitQueue[k];
         if(h.judged) continue;
-        const d = (tapTime - h.time) * 1000;
+        const d = (tapTime - perceived(h.time)) * 1000;
         if(Math.abs(d) < bestAbs){ bestAbs = Math.abs(d); best = h; bestDelta = d; }
       }
-      if(!best || bestAbs > cfg.searchMs){
-        emit("whiff", {});
-        return;
-      }
+      if(!best || bestAbs > cfg.searchMs){ emit("whiff", {}); return; }
       best.judged = true;
       const verdict = bestAbs <= cfg.windows.perfectMs ? "perfect"
                      : bestAbs <= cfg.windows.goodMs    ? "good"
@@ -371,18 +456,19 @@
       emit("judged", { i:best.i, verdict, deltaMs:bestDelta });
     }
 
-    // まだ判定されていない、いちばん近いヒート拍を返す（描画用）
-    function peekNextHit(){
-      for(let k=0;k<hitQueue.length;k++){
-        if(!hitQueue[k].judged) return hitQueue[k];
+    // まだ判定されていない、近い順のヒート拍を最大n個返す（描画用）
+    function peekHits(n){
+      const out = [];
+      for(let k=0;k<hitQueue.length && out.length<n;k++){
+        if(!hitQueue[k].judged) out.push(hitQueue[k]);
       }
-      return null;
+      return out;
     }
 
     function isRunning(){ return running; }
     function now(){ return Sfx.unlock().currentTime; }
 
-    return { on, start, judgeInput, peekNextHit, isRunning, now };
+    return { on, start, judgeInput, peekHits, isRunning, now, perceived, offset };
   })();
 
   /* =========================================================
@@ -422,32 +508,47 @@
      4. RingGame — 「ぴったりリング」ミニゲーム固有のロジックと見た目
      ========================================================= */
   const RingGame = (function(){
-    const PERFECT_MS = 30, GOOD_MS = 80, SEARCH_MS = 150, MISS_MS = 100;
+    // 判定幅。押す瞬間が分かるようにした分、極端に狭くはしない。
+    const PERFECT_MS = 50, GOOD_MS = 110, SEARCH_MS = 220, MISS_MS = 130;
     const PHRASES = [
+      { bpm:92,  pattern:"straight" },
       { bpm:100, pattern:"straight" },
-      { bpm:108, pattern:"straight" },
-      { bpm:116, pattern:"synco"    }
+      { bpm:108, pattern:"synco"    }
     ];
-    const COUNTDOWN_BPM = 100;
+    const COUNT_BEATS = 8;          // 手拍子を合わせる余裕をもたせた長めのカウントイン
+    const COUNTDOWN_BPM = 92;
     const HIT_TOTAL = PHRASES.length * 8;
+    const APPROACH_QN = 2;          // 何拍ぶん手前からリングを出すか
+    const SCALE_MAX = 4.2;
+    const RING_POOL = 4;            // 同時に見せる先読みリングの数
     const BEST_KEY = "rhythm-ring-best";
+    const OFFSET_KEY = "rhythm-ring-offset";
 
     let beats = [];
     let stats = null;
-    let els = {};
+    let rings = [];
+    let pulsedUpTo = -1;
+    let userOffsetMs = 0;
 
     function buildBeats(){
       const list = [];
-      for(let i=0;i<4;i++){
+      for(let i=0;i<COUNT_BEATS;i++){
         list.push({ bpm:COUNTDOWN_BPM, gapQN:1, isHit:false, isCountdown:true,
-                     label: i<3 ? String(3-i) : "GO!" });
+                     accent:(i >= COUNT_BEATS-4),
+                     label: i >= COUNT_BEATS-4 ? String(COUNT_BEATS-i) : "" });
       }
       PHRASES.forEach(function(ph){
         if(ph.pattern === "straight"){
-          for(let k=0;k<8;k++) list.push({ bpm:ph.bpm, gapQN:1, isHit:true });
+          for(let k=0;k<8;k++) list.push({ bpm:ph.bpm, gapQN:1, isHit:true, isOff:false });
         }else{
+          // 8分の裏拍を混ぜる。裏拍のリングは色を変えて見分けられるようにする。
           const gaps = [1,0.5,0.5,1,1,0.5,0.5,1];
-          for(let k=0;k<8;k++) list.push({ bpm:ph.bpm, gapQN:gaps[k], isHit:true });
+          let acc = 0;
+          for(let k=0;k<8;k++){
+            const isOff = Math.abs(acc - Math.round(acc)) > 0.01;   // 小節内で拍の頭からずれている
+            list.push({ bpm:ph.bpm, gapQN:gaps[k], isHit:true, isOff:isOff });
+            acc += gaps[k];
+          }
         }
       });
       return list;
@@ -458,6 +559,12 @@
     }
     function saveBest(rec){
       try{ localStorage.setItem(BEST_KEY, JSON.stringify(rec)); }catch(e){}
+    }
+    function loadOffset(){
+      try{ return Number(localStorage.getItem(OFFSET_KEY)) || 0; }catch(e){ return 0; }
+    }
+    function saveOffset(ms){
+      try{ localStorage.setItem(OFFSET_KEY, String(ms)); }catch(e){}
     }
     function paintBestLine(){
       const best = loadBest();
@@ -480,60 +587,112 @@
       if(box.children[hitOrder]) box.children[hitOrder].className = "pip " + (ok ? "ok" : "ng");
     }
 
-    function showJudgeText(verdict){
+    function showJudgeText(verdict, deltaMs){
       const el = $("judgeText");
-      el.className = "";                 // アニメーションを再生しなおすためリセット
-      void el.offsetWidth;                // reflow を挟んで再トリガー
-      el.textContent = verdict === "perfect" ? "PERFECT!" : verdict === "good" ? "GOOD" : "MISS";
+      el.className = "";
+      void el.offsetWidth;                 // アニメーションを再生しなおすため
+      let txt;
+      if(verdict === "perfect"){
+        txt = "PERFECT!";
+      }else{
+        const dir = deltaMs == null ? "" : (deltaMs < 0 ? "　はやい" : "　おそい");
+        txt = (verdict === "good" ? "GOOD" : "MISS") + dir;
+      }
+      el.textContent = txt;
       el.className = "show " + verdict;
     }
     function flareRing(verdict){
-      const el = $("ringOuter");
-      el.classList.remove("flare","perfect","good","miss");
+      const el = $("flare");
+      el.classList.remove("go","perfect","good","miss");
       void el.offsetWidth;
-      el.classList.add("flare", verdict);
+      el.classList.add("go", verdict);
+    }
+    // 押したズレ量をメーターに表示する。中央がぴったり、左が早い、右が遅い。
+    function showMeter(deltaMs){
+      const el = $("meterMark");
+      if(deltaMs == null){ el.style.opacity = "0"; return; }
+      const p = clamp(deltaMs / SEARCH_MS, -1, 1);
+      el.style.left = (50 + p * 50) + "%";
+      el.style.opacity = "1";
+      setTimeout(function(){ el.style.opacity = "0"; }, 900);
+    }
+    function pulseTarget(){
+      const el = $("ringTarget");
+      el.classList.remove("pulse");
+      void el.offsetWidth;
+      el.classList.add("pulse");
     }
 
     function onFrame(){
       const now = Engine.now();
-      const goBeat = beats[3];
-      if(typeof goBeat.time !== "number" || now < goBeat.time + 0.25){
-        let activeIdx = -1;
-        for(let i=0;i<4;i++){
-          if(typeof beats[i].time === "number" && beats[i].time <= now) activeIdx = i;
-        }
-        $("countdownNum").classList.add("show");
-        $("ringStage").style.opacity = "0";
-        if(activeIdx >= 0){
-          const lbl = beats[activeIdx].label;
-          if($("countdownLabel").textContent !== lbl) $("countdownLabel").textContent = lbl;
-        }
-        return;
+
+      // 拍が来るたびに的を脈打たせる。テンポを体で掴むための基準になる。
+      for(let i=pulsedUpTo+1;i<beats.length;i++){
+        const b = beats[i];
+        if(typeof b.time !== "number") break;
+        if(Engine.perceived(b.time) <= now){ pulsedUpTo = i; pulseTarget(); }
+        else break;
       }
-      $("countdownNum").classList.remove("show");
-      $("ringStage").style.opacity = "1";
 
-      const next = Engine.peekNextHit();
-      const ring = $("ringOuter");
-      if(!next){ ring.style.opacity = "0"; return; }
-      const beat = beats[next.i];
-      if(typeof beat.time !== "number"){ ring.style.opacity = "0"; return; }
+      // カウントインの数字表示
+      const lastCount = beats[COUNT_BEATS-1];
+      if(typeof lastCount.time !== "number" || now < Engine.perceived(lastCount.time) + 0.2){
+        let activeIdx = -1;
+        for(let i=0;i<COUNT_BEATS;i++){
+          if(typeof beats[i].time === "number" && Engine.perceived(beats[i].time) <= now) activeIdx = i;
+        }
+        const lbl = activeIdx >= 0 ? beats[activeIdx].label : "";
+        if(lbl){
+          $("countdownNum").classList.add("show");
+          if($("countdownLabel").textContent !== lbl) $("countdownLabel").textContent = lbl;
+        }else{
+          $("countdownNum").classList.remove("show");
+        }
+      }else{
+        $("countdownNum").classList.remove("show");
+      }
 
-      const approach = clamp((60/beat.bpm) * beat.gapQN, 0.35, 1.0);
-      const t0 = beat.time - approach;
-      if(now < t0 - 0.05){ ring.style.opacity = "0"; return; }
+      // 迫ってくるリングを複数まとめて描く。先の拍まで見えるのでリズムを先読みできる。
+      const hits = Engine.peekHits(RING_POOL);
+      let nearestAbs = Infinity;
+      for(let k=0;k<rings.length;k++){
+        const el = rings[k];
+        const h = hits[k];
+        if(!h){ el.style.opacity = "0"; continue; }
+        const beat = beats[h.i];
+        const tHit = Engine.perceived(h.time);
+        const approach = (60 / beat.bpm) * APPROACH_QN;
+        const p = (now - (tHit - approach)) / approach;
+        if(p < 0){ el.style.opacity = "0"; continue; }
+        const pc = Math.min(p, 1.2);
+        const scale = SCALE_MAX - (SCALE_MAX - 1) * pc;
+        el.style.transform = "translate(-50%,-50%) scale(" + scale.toFixed(3) + ")";
+        el.style.opacity = String(clamp(p * 5, 0, 1));
+        el.className = "approach" + (k === 0 ? " lead" : "") + (beat.isOff ? " off" : "");
+        if(k === 0) nearestAbs = Math.abs(now - tHit) * 1000;
+      }
 
-      const progress = clamp((now - t0)/approach, 0, 1.2);
-      const scale = 3 - 2 * Math.min(progress, 1);
-      ring.style.opacity = "1";
-      ring.style.transform = "translate(-50%,-50%) scale(" + scale.toFixed(3) + ")";
+      // いちばん近いリングが判定窓に入ったら的を白く光らせる＝「いま押す」の合図
+      const target = $("ringTarget");
+      if(nearestAbs <= GOOD_MS) target.classList.add("hot");
+      else target.classList.remove("hot");
+
+      // 的の内側を、リングが近づくほど濃く塗る。距離が色の濃さでも分かるようにする。
+      const fill = $("targetFill");
+      if(nearestAbs === Infinity){ fill.style.opacity = "0"; }
+      else{
+        const near = clamp(1 - nearestAbs / 400, 0, 1);
+        fill.style.opacity = (near * near * 0.28).toFixed(3);
+      }
     }
 
     function onJudged(payload){
-      const order = payload.i - 4;   // beats配列上の位置 -&gt; 何番目のヒート拍か（先頭4つはカウントダウン）
+      const order = payload.i - COUNT_BEATS;   // beats配列上の位置 -> 何番目のヒート拍か
       if(payload.verdict === "perfect") stats.perfect++;
       else if(payload.verdict === "good") stats.good++;
       else stats.miss++;
+
+      if(payload.deltaMs != null) stats.deltas.push(payload.deltaMs);
 
       if(payload.verdict === "miss"){
         stats.combo = 0;
@@ -545,7 +704,8 @@
       paintPip(order, payload.verdict !== "miss");
       $("scoreVal").textContent = stats.score;
       $("comboVal").textContent = stats.combo;
-      showJudgeText(payload.verdict);
+      showJudgeText(payload.verdict, payload.deltaMs);
+      showMeter(payload.deltaMs);
       flareRing(payload.verdict);
       Sfx.judgeSfx(payload.verdict);
     }
@@ -558,6 +718,17 @@
       if(okRatio >= 0.9) return { g:"A", note:"かなり良いリズム感！" };
       if(okRatio >= 0.7) return { g:"B", note:"いい調子！" };
       return { g:"C", note:"また挑戦してみよう" };
+    }
+
+    // 平均のズレを見せて、音ズレ調整をいくつにすればいいか分かるようにする
+    function biasText(){
+      if(stats.deltas.length < 4) return "";
+      const mean = stats.deltas.reduce(function(a,b){ return a+b; }, 0) / stats.deltas.length;
+      if(Math.abs(mean) < 18) return "平均のズレ " + mean.toFixed(0) + " ms　ほぼぴったりです。";
+      const dir = mean > 0 ? "おそめ" : "はやめ";
+      const suggest = Math.round((userOffsetMs + mean) / 5) * 5;
+      return "平均して " + Math.abs(mean).toFixed(0) + " ms " + dir + "です。\n" +
+             "音ズレ調整を " + suggest + " ms にすると合わせやすくなります。";
     }
 
     function onSessionEnd(){
@@ -581,6 +752,9 @@
       $("resultBest").textContent = isNewBest
         ? "新記録！ ベストスコア " + rec.bestScore
         : "ベストスコア " + rec.bestScore + "（最大コンボ " + rec.bestCombo + "）";
+      const bias = biasText();
+      $("resultBias").textContent = bias;
+      $("resultBias").style.whiteSpace = "pre-line";
 
       $("result").style.display = "flex";
     }
@@ -590,12 +764,15 @@
       $("title").style.display = "none";
       $("result").style.display = "none";
       $("play").style.display = "flex";
-      $("ringStage").style.opacity = "0";
-      $("ringOuter").style.opacity = "0";
       $("countdownNum").classList.remove("show");
+      $("ringTarget").classList.remove("hot");
+      $("targetFill").style.opacity = "0";
+      $("meterMark").style.opacity = "0";
+      rings.forEach(function(el){ el.style.opacity = "0"; });
 
-      stats = { perfect:0, good:0, miss:0, combo:0, maxCombo:0, score:0 };
+      stats = { perfect:0, good:0, miss:0, combo:0, maxCombo:0, score:0, deltas:[] };
       beats = buildBeats();
+      pulsedUpTo = -1;
       resetProgress();
       $("scoreVal").textContent = "0";
       $("comboVal").textContent = "0";
@@ -605,17 +782,36 @@
         windows: { perfectMs:PERFECT_MS, goodMs:GOOD_MS },
         searchMs: SEARCH_MS,
         missWindowMs: MISS_MS,
+        userOffsetMs: userOffsetMs,
         onScheduleTick: Sfx.playTick
       });
     }
 
     function mount(){
-      els.stage = $("stage");
+      // 先読み用のリングを必要な数だけ用意しておく（毎フレーム作り直さない）
+      const stage = $("ringStage");
+      for(let k=0;k<RING_POOL;k++){
+        const el = document.createElement("div");
+        el.className = "approach";
+        el.style.opacity = "0";
+        stage.insertBefore(el, $("ringTarget"));
+        rings.push(el);
+      }
+
       Engine.on("frame", onFrame);
       Engine.on("judged", onJudged);
       Engine.on("sessionEnd", onSessionEnd);
       Input.setHandler(function(ts){ Engine.judgeInput(ts); });
       Input.bind($("play"));
+
+      userOffsetMs = loadOffset();
+      $("offsetRange").value = String(userOffsetMs);
+      $("offsetVal").textContent = String(userOffsetMs);
+      $("offsetRange").addEventListener("input", function(e){
+        userOffsetMs = Number(e.target.value) || 0;
+        $("offsetVal").textContent = String(userOffsetMs);
+        saveOffset(userOffsetMs);
+      });
 
       $("startBtn").addEventListener("click", beginSession);
       $("retryBtn").addEventListener("click", beginSession);
