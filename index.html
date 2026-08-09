@@ -75,8 +75,17 @@
     flex-direction:column;align-items:center;justify-content:center;text-align:center;
   }
   #calib h2{font-size:22px;font-weight:900;letter-spacing:.05em;color:var(--accent2);}
-  #calibLead{margin-top:12px;max-width:320px;font-size:13px;line-height:1.9;opacity:.9;}
-  #calibLead b{color:var(--accent2);}
+  .calibView{display:none;flex-direction:column;align-items:center;width:100%;}
+  .calibView.on{display:flex;}
+  .calibLead{margin-top:12px;max-width:320px;font-size:13px;line-height:1.9;opacity:.9;}
+  .calibLead b{color:var(--accent2);}
+  .calibNote{margin-top:10px;max-width:320px;font-size:11.5px;line-height:1.75;opacity:.7;}
+  /* 出力先を選ぶだけの「かんたん設定」ボタン */
+  .preset{width:100%;max-width:300px;margin-top:10px;text-align:left;
+    padding:12px 18px;font-size:14px;letter-spacing:.04em;line-height:1.5;}
+  .preset small{display:block;font-size:11px;opacity:.65;letter-spacing:0;margin-top:2px;}
+  .bigChoice{width:100%;max-width:300px;line-height:1.4;}
+  .bigChoice small{display:block;font-size:11px;font-weight:600;opacity:.7;letter-spacing:.02em;margin-top:3px;}
   #calibArena{position:relative;width:200px;height:200px;margin:26px 0 6px;}
   #calibRing{
     position:absolute;left:50%;top:50%;width:120px;height:120px;
@@ -98,11 +107,8 @@
   #calibDots div{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.16);}
   #calibDots div.on{background:var(--accent2);}
   /* 計測後に出る結果パネル */
-  #calibDone{display:none;margin-top:18px;max-width:320px;}
-  #calibVal{font-size:15px;line-height:1.8;}
+  #calibVal{font-size:15px;line-height:1.8;max-width:320px;}
   #calibVal b{font-size:28px;color:var(--accent2);}
-  #calibNote{margin-top:8px;font-size:12px;line-height:1.75;opacity:.8;}
-  #calibBtns{display:flex;flex-direction:column;align-items:center;}
 
   /* ===== プレイ画面 ===== */
   #play{flex-direction:column;height:100%;padding:16px 16px 20px;touch-action:none;}
@@ -238,11 +244,12 @@
     .best{margin-top:10px;font-size:11.5px;}
     .btn{margin-top:12px;padding:13px 40px;font-size:17px;}
     .btn.ghost{padding:9px 22px;font-size:13px;}
-    #calibLead{margin-top:9px;font-size:12px;line-height:1.75;}
+    .calibLead{margin-top:9px;font-size:12px;line-height:1.75;}
     #calibArena{width:150px;height:150px;margin:14px 0 4px;}
     #calibRing{width:96px;height:96px;}
     #calib h2{font-size:19px;}
-    #calibNote{font-size:11px;}
+    .calibNote{font-size:10.5px;line-height:1.6;margin-top:8px;}
+    .preset{padding:10px 16px;font-size:13px;margin-top:8px;}
   }
 </style>
 </head>
@@ -273,28 +280,62 @@
 
   <!-- ===== 音ズレ計測 ===== -->
   <div id="calib" class="screen">
-    <h2>音ズレを測ります</h2>
-    <div id="calibLead">
-      端末やイヤホンによって、音が耳に届くまでの<b>遅れ</b>はまちまちです。<br>
-      これから一定のリズムで音が鳴るので、<b>音に合わせてタップ</b>（またはスペースキー）してください。<br>
-      正確さは気にせず、自然に合わせてください。
-    </div>
-    <div id="calibArena">
-      <div id="calibRing"></div>
-    </div>
-    <div id="calibCount"></div>
-    <div id="calibDots"></div>
+    <h2 id="calibTitle">音ズレを合わせる</h2>
 
-    <div id="calibDone">
-      <div id="calibVal"></div>
-      <div id="calibNote"></div>
+    <!-- 方法えらび -->
+    <div id="calibMenu" class="calibView on">
+      <div class="calibLead">
+        端末やイヤホンによって、音が耳に届くまでの<b>遅れ</b>はまちまちです。<br>
+        ここを合わせておくと、ぐっと押しやすくなります。
+      </div>
+      <button class="btn bigChoice" id="toPresetBtn" style="margin-top:22px;">
+        かんたん設定<small>選ぶだけ・すぐ終わる</small>
+      </button>
+      <button class="btn ghost bigChoice" id="toMeasureBtn" style="margin-top:12px;">
+        叩いて測る<small>最短6回・より正確</small>
+      </button>
+      <button class="btn ghost" id="calibSkip" style="margin-top:14px;">スキップ</button>
     </div>
 
-    <div id="calibBtns">
+    <!-- かんたん設定：出力先を選ぶだけ -->
+    <div id="calibPreset" class="calibView">
+      <div class="calibLead">音を聞く方法に近いものを選んでください。</div>
+      <button class="btn ghost preset" data-ms="0">
+        有線イヤホン・ヘッドホン<small>ケーブルでつなぐタイプ</small>
+      </button>
+      <button class="btn ghost preset" data-ms="30">
+        スマホ / PC の内蔵スピーカー<small>本体から音を出す</small>
+      </button>
+      <button class="btn ghost preset" data-ms="150">
+        Bluetooth（ワイヤレス）<small>遅れが大きく出ます</small>
+      </button>
+      <div class="calibNote">
+        あくまで目安の値です。ズレを感じたら「叩いて測る」か、タイトルの調整バーで直せます。
+      </div>
+      <button class="btn ghost" id="presetBackBtn" style="margin-top:12px;">もどる</button>
+    </div>
+
+    <!-- 叩いて測る -->
+    <div id="calibMeasure" class="calibView">
+      <div class="calibLead" id="calibMeasureLead">
+        一定のリズムで音が鳴るので、<b>音に合わせてタップ</b>（またはスペースキー）してください。<br>
+        正確さは気にせず、自然に合わせてください。
+      </div>
+      <div id="calibArena">
+        <div id="calibRing"></div>
+      </div>
+      <div id="calibCount"></div>
+      <div id="calibDots"></div>
       <button class="btn" id="calibStartBtn">計測をはじめる</button>
-      <button class="btn" id="calibAcceptBtn" style="display:none;">この設定で始める</button>
-      <button class="btn ghost" id="calibRetryBtn" style="display:none;">もう一度測る</button>
-      <button class="btn ghost" id="calibSkip">スキップ</button>
+      <button class="btn ghost" id="measureBackBtn" style="margin-top:12px;">もどる</button>
+    </div>
+
+    <!-- 結果 -->
+    <div id="calibDone" class="calibView">
+      <div id="calibVal"></div>
+      <div class="calibNote" id="calibNote"></div>
+      <button class="btn" id="calibAcceptBtn" style="margin-top:16px;">この設定で始める</button>
+      <button class="btn ghost" id="calibRetryBtn" style="margin-top:10px;">やりなおす</button>
     </div>
   </div>
 
@@ -669,15 +710,22 @@
   const Calibration = (function(){
     const BPM = 100;
     const LEAD_BEATS = 4;      // 助走。ここは測らない
-    const MEASURE_BEATS = 16;  // 測る拍数
+    const MEASURE_BEATS = 16;  // 測る拍数の上限
     const DROP_FIRST = 2;      // 出だしは安定しないので捨てる
-    const MIN_TAPS = 8;        // これ未満なら計測失敗とみなす
+    const MIN_TAPS = 6;        // 早期終了に必要な有効タップ数（これ未満なら失敗）
+    const STABLE_IQR = 45;     // ばらつき(四分位範囲)がこれ以下なら、もう測らなくてよい
     const ACCEPT_MS = 250;     // これ以上ずれた入力は拍と無関係とみなし採用しない
+
+    // 「かんたん設定」の目安値。ブラウザが申告する outputLatency に上乗せする分。
+    // 有線はブラウザの申告でおおむね足りるが、Bluetooth は無線伝送の遅れが
+    // 申告に含まれないことが多く、体感で大きくずれる。
+    const PRESETS = { "0":"有線イヤホン・ヘッドホン", "30":"内蔵スピーカー", "150":"Bluetooth" };
 
     let deltas = [];
     let pulsedUpTo = -1;
     let beats = [];
-    let onFinish = null;       // 計測完了後にどこへ戻るか
+    let finished = false;      // 早期終了と自然終了で二重に確定させないための番人
+    let onFinish = null;       // 完了後にどこへ戻るか
 
     function buildBeats(){
       const list = [];
@@ -717,64 +765,88 @@
       }
     }
 
+    // ばらつきは四分位範囲で測る。
+    // 中央絶対偏差だと、半数以上が一箇所に固まっていれば残りがどれだけ外れていても
+    // 0 になってしまい、「安定して叩けている」と誤判定する。
+    function percentile(sorted, p){
+      if(!sorted.length) return 0;
+      const idx = (sorted.length - 1) * p;
+      const lo = Math.floor(idx), hi = Math.ceil(idx);
+      if(lo === hi) return sorted[lo];
+      return sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo);
+    }
+    function spreadOf(arr){
+      const a = arr.slice().sort(function(x,y){ return x - y; });
+      return percentile(a, 0.75) - percentile(a, 0.25);
+    }
+
     function onJudged(p){
-      if(p.deltaMs == null) return;              // 叩かなかった拍は無視
+      if(finished) return;
+      if(p.deltaMs == null) return;               // 叩かなかった拍は無視
       if(Math.abs(p.deltaMs) > ACCEPT_MS) return; // 明らかに拍と無関係な入力は捨てる
       deltas.push(p.deltaMs);
       Sfx.tapSfx();
       paintDots();
-      const left = MEASURE_BEATS - deltas.length;
-      $("calibCount").innerHTML = left > 0 ? "あと <b>" + left + "</b> 回" : "計測中…";
-    }
 
-    function onSessionEnd(){
-      Engine.reset();
       const used = deltas.slice(DROP_FIRST);
       if(used.length < MIN_TAPS){
-        $("calibCount").textContent = "";
+        const left = DROP_FIRST + MIN_TAPS - deltas.length;
+        $("calibCount").innerHTML = "あと <b>" + left + "</b> 回";
+        return;
+      }
+      // 十分に安定していれば、最後まで叩かせずに切り上げる
+      if(spreadOf(used) <= STABLE_IQR){ finishMeasure(); return; }
+      $("calibCount").textContent = "もう少し…";
+    }
+
+    function finishMeasure(){
+      if(finished) return;
+      finished = true;
+      Engine.reset();
+      const used = deltas.slice(DROP_FIRST);
+      $("calibCount").textContent = "";
+
+      if(used.length < MIN_TAPS){
         $("calibVal").textContent = "うまく測れませんでした";
         $("calibNote").textContent =
-          "音に合わせて " + MIN_TAPS + " 回以上タップが必要です。もう一度おためしください。";
-        $("calibDone").style.display = "block";
-        $("calibStartBtn").style.display = "none";
+          "音に合わせて " + MIN_TAPS + " 回以上タップが必要です。"
+          + "うまくいかないときは「かんたん設定」で選ぶだけでもOKです。";
         $("calibAcceptBtn").style.display = "none";
-        $("calibRetryBtn").style.display = "inline-block";
-        $("calibSkip").style.display = "inline-block";   // 測れなくても先へ進めるようにしておく
+        $("calibRetryBtn").textContent = "やりなおす";
+        view("calibDone");
         return;
       }
       // 中央値ぶんだけ「拍だと感じる時刻」を後ろへずらせば、次からズレが0に寄る
       const measured = Settings.set(median(used));
       Settings.markCalibrated();
-
-      const spread = median(used.map(function(d){ return Math.abs(d - median(used)); }));
-      $("calibCount").textContent = "";
+      const spread = spreadOf(used);
       $("calibVal").innerHTML = "あなたの音ズレ　<b>" + (measured >= 0 ? "+" : "") + measured + "</b> ms";
       $("calibNote").textContent =
         "この分だけ判定をずらして合わせます（" + used.length + "回の入力から算出／ばらつき±"
-        + Math.round(spread) + "ms）。あとからタイトルの調整バーで微調整もできます。";
-      $("calibDone").style.display = "block";
-      $("calibStartBtn").style.display = "none";
+        + Math.round(spread/2) + "ms）。"
+        + (spread > STABLE_IQR
+            ? "叩くタイミングがばらついていたので、うまく合わないときは測りなおすか「かんたん設定」もお試しください。"
+            : "あとからタイトルの調整バーで微調整もできます。");
       $("calibAcceptBtn").style.display = "inline-block";
-      $("calibRetryBtn").style.display = "inline-block";
-      $("calibSkip").style.display = "none";   // 測れたので、あとは進むか測りなおすかだけ
+      $("calibRetryBtn").textContent = "やりなおす";
+      view("calibDone");
     }
 
     function run(){
       Engine.reset();
       deltas = [];
       pulsedUpTo = -1;
+      finished = false;
       beats = buildBeats();
       resetDots();
-      $("calibDone").style.display = "none";
       $("calibStartBtn").style.display = "none";
-      $("calibAcceptBtn").style.display = "none";
-      $("calibRetryBtn").style.display = "none";
-      $("calibSkip").style.display = "inline-block";
-      $("calibCount").innerHTML = "あと <b>" + MEASURE_BEATS + "</b> 回";
+      $("measureBackBtn").style.display = "none";
+      $("calibCount").innerHTML = "あと <b>" + (DROP_FIRST + MIN_TAPS) + "</b> 回";
+      view("calibMeasure");
 
       Engine.on("frame", onFrame);
       Engine.on("judged", onJudged);
-      Engine.on("sessionEnd", onSessionEnd);
+      Engine.on("sessionEnd", finishMeasure);
       Engine.start({
         beats: beats,
         // 計測では良し悪しを判定しない。素のズレだけを集める。
@@ -786,18 +858,44 @@
       });
     }
 
-    // 計測画面を開く（まだ走らせず、説明と開始ボタンを出す）
+    // 「かんたん設定」で選ばれた目安値を採用する
+    function applyPreset(ms){
+      Engine.reset();
+      const v = Settings.set(ms);
+      Settings.markCalibrated();
+      $("calibVal").innerHTML = PRESETS[String(ms)] + "　<b>" + (v >= 0 ? "+" : "") + v + "</b> ms";
+      $("calibNote").textContent =
+        "目安の値を設定しました。ずれて感じるときは「叩いて測る」で測りなおすか、"
+        + "タイトルの調整バーで微調整してください。";
+      $("calibAcceptBtn").style.display = "inline-block";
+      $("calibRetryBtn").textContent = "選びなおす";
+      view("calibDone");
+    }
+
+    // 計測画面の中で、どのパネルを見せるか
+    let lastView = "calibMenu";
+    function view(name){
+      ["calibMenu","calibPreset","calibMeasure","calibDone"].forEach(function(v){
+        $(v).classList.toggle("on", v === name);
+      });
+      if(name !== "calibDone") lastView = name;
+      $("calibTitle").textContent =
+        name === "calibMeasure" ? "音に合わせて叩いてください"
+      : name === "calibPreset"  ? "音の出し方を選ぶ"
+      : name === "calibDone"    ? "設定しました"
+      : "音ズレを合わせる";
+    }
+
     function open(finishCb){
       Engine.reset();
       onFinish = finishCb;
       deltas = [];
+      finished = false;
       resetDots();
       $("calibCount").textContent = "";
-      $("calibDone").style.display = "none";
       $("calibStartBtn").style.display = "inline-block";
-      $("calibAcceptBtn").style.display = "none";
-      $("calibRetryBtn").style.display = "none";
-      $("calibSkip").style.display = "inline-block";
+      $("measureBackBtn").style.display = "inline-block";
+      view("calibMenu");
       show("calib");
     }
 
@@ -809,8 +907,32 @@
 
     function mount(){
       Input.bindPointer($("calibArena"));
+      $("toPresetBtn").addEventListener("click", function(){ view("calibPreset"); });
+      $("toMeasureBtn").addEventListener("click", function(){
+        $("calibStartBtn").style.display = "inline-block";
+        $("measureBackBtn").style.display = "inline-block";
+        $("calibCount").textContent = "";
+        resetDots();
+        view("calibMeasure");
+      });
+      $("presetBackBtn").addEventListener("click", function(){ view("calibMenu"); });
+      $("measureBackBtn").addEventListener("click", function(){ Engine.reset(); view("calibMenu"); });
+      [].forEach.call(document.querySelectorAll(".preset"), function(b){
+        b.addEventListener("click", function(){ applyPreset(Number(b.dataset.ms)); });
+      });
       $("calibStartBtn").addEventListener("click", run);
-      $("calibRetryBtn").addEventListener("click", run);
+      // やりなおしは、直前に使っていた方法（選ぶ／叩く）へ戻す
+      $("calibRetryBtn").addEventListener("click", function(){
+        Engine.reset();
+        if(lastView === "calibPreset"){ view("calibPreset"); }
+        else{
+          $("calibStartBtn").style.display = "inline-block";
+          $("measureBackBtn").style.display = "inline-block";
+          $("calibCount").textContent = "";
+          resetDots();
+          view("calibMeasure");
+        }
+      });
       $("calibAcceptBtn").addEventListener("click", finish);
       $("calibSkip").addEventListener("click", function(){
         Settings.markCalibrated();   // 次回から自動では出さない（測りなおしはいつでも可能）
