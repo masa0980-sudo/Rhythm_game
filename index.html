@@ -203,15 +203,21 @@
   #meterLabels{position:absolute;top:-2px;left:0;right:0;display:flex;justify-content:space-between;
     font-size:10px;opacity:.5;}
 
-  #countdownNum{
+  /* カウントダウン数字。#play / #echo / #timeg の3画面で使うため、
+     ID ではなくクラスにしてある（同じIDを複数画面に置くと getElementById が壊れる）。 */
+  .countdownNum{
     position:absolute;inset:0;display:none;
     align-items:center;justify-content:center;
     font-size:88px;font-weight:900;color:var(--accent2);
     text-shadow:0 0 30px rgba(255,209,102,.6);
     pointer-events:none;
   }
-  #countdownNum.show{display:flex;}
-  #countdownNum span{display:inline-block;animation:pop .3s ease-out;}
+  .countdownNum.show{display:flex;}
+  .countdownNum span{display:inline-block;animation:pop .3s ease-out;}
+  /* カウントダウン中は、その画面の中身（リング/トラック/時計など）を隠して
+     大きな数字と重ならないようにする。#ringStage / #echoStage / #timeStage に
+     .counting を付け外しするだけで効く（中身の要素を個別に知らなくてよい）。 */
+  .counting > *:not(.countdownNum){ opacity:0; transition:opacity .15s; }
   @keyframes pop{from{transform:scale(.4);opacity:0;}to{transform:scale(1);opacity:1;}}
 
   #hint{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:12px;opacity:.55;}
@@ -227,12 +233,95 @@
   .card .sub2{font-size:13px;opacity:.85;margin-bottom:14px;}
   .tally{font-size:13.5px;line-height:2.0;text-align:left;max-width:220px;margin:0 auto 6px;}
   .tally span{float:right;font-weight:800;}
-  .tally .perfect{color:var(--accent2);} .tally .good{color:var(--good);} .tally .miss{color:var(--ng);}
+  .tally .perfect{color:var(--accent2);} .tally .great{color:var(--accent);}
+  .tally .good{color:var(--good);} .tally .miss{color:var(--ng);}
   .scoreLine{font-size:14px;margin:12px 0 2px;}
   .scoreLine b{font-size:26px;color:var(--accent);}
   .bestLine{font-size:12px;opacity:.75;margin-bottom:4px;}
   /* 平均してどれだけ早い/遅いかを伝え、音ズレ調整の目安にしてもらう */
   .biasLine{font-size:12px;line-height:1.7;opacity:.9;margin:8px 0 0;color:var(--accent);white-space:pre-line;}
+
+  /* ===== タイトルのキーアート =====
+     art/keyart.png があれば背景に敷く。無ければ JS が隠すので、画像なしでもそのまま動く。 */
+  #keyartLayer{position:absolute;inset:0;z-index:0;overflow:hidden;}
+  #keyart{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
+  #titleScrim{position:absolute;inset:0;
+    background:radial-gradient(115% 85% at 50% 42%,rgba(10,13,20,.30),rgba(10,13,20,.90) 78%);}
+  #titleInner{position:relative;z-index:1;display:flex;flex-direction:column;
+    align-items:center;width:100%;}
+
+  /* ===== ゲーム選択 ===== */
+  .scrTitle{font-size:20px;font-weight:900;letter-spacing:.06em;color:var(--accent2);margin-bottom:4px;}
+  #select{z-index:32;padding:20px;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;overflow-y:auto;}
+  #gameList{width:100%;max-width:340px;margin-top:12px;}
+  .gameCard{display:block;width:100%;margin-top:10px;padding:13px 16px;border-radius:14px;
+    text-align:left;cursor:pointer;color:var(--text);
+    background:rgba(20,26,40,.66);border:1px solid var(--line);
+    transition:background .15s,border-color .15s,transform .1s;}
+  .gameCard:hover{background:rgba(255,255,255,.09);border-color:var(--accent);}
+  .gameCard:active{transform:scale(.99);}
+  .gameCard .gName{font-size:15px;font-weight:800;letter-spacing:.04em;color:var(--accent2);}
+  .gameCard .gDesc{font-size:11.5px;line-height:1.7;opacity:.8;margin-top:3px;}
+  .gameCard .gBest{font-size:11px;margin-top:5px;color:var(--accent);opacity:.9;}
+
+  /* 各ゲーム共通の見出し行と下部ヒント */
+  .gameHead{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 12px;}
+  .hintBar{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:12px;opacity:.55;}
+
+  /* ===== まねっこリズム ===== */
+  #echo{flex-direction:column;height:100%;padding:16px 16px 20px;touch-action:none;}
+  #echoStage{position:relative;flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;}
+  #echoPanels{display:flex;gap:14px;width:100%;max-width:330px;}
+  .echoPanel{flex:1;padding:14px 8px;border-radius:14px;text-align:center;
+    font-size:13px;font-weight:800;letter-spacing:.06em;
+    background:rgba(20,26,40,.6);border:1px solid var(--line);opacity:.45;
+    transition:opacity .12s,border-color .12s,box-shadow .12s;}
+  .echoPanel.active{opacity:1;border-color:var(--accent2);
+    box-shadow:0 0 22px rgba(255,209,102,.35);}
+  #echoResp.active{border-color:var(--accent);box-shadow:0 0 22px rgba(90,209,255,.35);}
+  /* 8スロットのトラック。叩くべき位置をゴーストで見せ、再生ヘッドが左から右へ流れる */
+  #echoTrack{position:relative;display:flex;gap:5px;width:100%;max-width:330px;margin-top:26px;}
+  .slot{flex:1;height:46px;border-radius:9px;background:rgba(255,255,255,.06);
+    border:1px solid var(--line);transition:background .1s,border-color .1s;}
+  .slot.beat{border-color:rgba(255,255,255,.32);}   /* 4分の頭を少し濃く */
+  .slot.ghost{background:rgba(90,209,255,.16);border-color:rgba(90,209,255,.45);}
+  .slot.lit{background:var(--accent2);border-color:#fff;box-shadow:0 0 18px rgba(255,209,102,.6);}
+  .slot.hit{background:var(--ok);border-color:#9ff0c4;}
+  .slot.missed{background:rgba(216,72,63,.5);border-color:var(--ng);}
+  #echoHead{position:absolute;top:-7px;width:3px;height:60px;background:#fff;
+    border-radius:2px;opacity:0;box-shadow:0 0 10px rgba(255,255,255,.8);}
+  #echoRound{margin-top:20px;font-size:12.5px;letter-spacing:.08em;opacity:.8;}
+  #echoRound b{color:var(--accent2);font-size:16px;}
+  #echoJudge{position:absolute;top:8%;left:50%;transform:translate(-50%,-50%);
+    font-size:23px;font-weight:900;letter-spacing:.05em;opacity:0;white-space:nowrap;pointer-events:none;}
+  #echoJudge.show{animation:judgePop .6s ease-out;}
+  #echoJudge.perfect{color:var(--accent2);} #echoJudge.good{color:var(--good);}
+  #echoJudge.miss{color:var(--ng);} #echoJudge.wait{color:#c68cff;}
+
+  /* ===== ぴったりストップ ===== */
+  #timeg{flex-direction:column;height:100%;padding:16px 16px 20px;touch-action:none;}
+  #timeStage{position:relative;flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;}
+  #timeTargetLabel{font-size:13px;letter-spacing:.1em;opacity:.75;}
+  #timeTarget{font-size:52px;font-weight:900;color:var(--accent2);line-height:1.2;
+    text-shadow:0 0 26px rgba(255,209,102,.45);}
+  #timeTarget span{font-size:20px;margin-left:4px;}
+  #timeClock{margin-top:26px;font-size:44px;font-weight:900;letter-spacing:.04em;
+    font-variant-numeric:tabular-nums;color:var(--accent);min-height:56px;}
+  #timeClock.hidden{color:rgba(255,255,255,.22);}
+  #timeState{margin-top:10px;font-size:13px;line-height:1.8;opacity:.85;min-height:24px;}
+  #timeRound{margin-top:18px;font-size:12.5px;letter-spacing:.08em;opacity:.8;}
+  #timeRound b{color:var(--accent2);font-size:16px;}
+  #timeJudge{position:absolute;top:10%;left:50%;transform:translate(-50%,-50%);
+    font-size:23px;font-weight:900;letter-spacing:.05em;opacity:0;white-space:nowrap;pointer-events:none;}
+  #timeJudge.show{animation:judgePop .7s ease-out;}
+  #timeJudge.perfect{color:var(--accent2);} #timeJudge.great{color:var(--accent);}
+  #timeJudge.good{color:var(--good);} #timeJudge.miss{color:var(--ng);}
+  /* エンドレスのライフ表示 */
+  #lifeRow{font-size:16px;letter-spacing:.14em;color:var(--ng);}
+  #lifeRow .off{opacity:.22;}
 
   /* 画面の縦が短い端末（iPhone SE など）で、スタートボタンが画面外へ出ないよう詰める */
   @media (max-height:700px){
@@ -250,6 +339,13 @@
     #calib h2{font-size:19px;}
     .calibNote{font-size:10.5px;line-height:1.6;margin-top:8px;}
     .preset{padding:10px 16px;font-size:13px;margin-top:8px;}
+    .gameCard{padding:10px 14px;margin-top:8px;}
+    .gameCard .gName{font-size:14px;}
+    .gameCard .gDesc{font-size:11px;line-height:1.6;}
+    #timeTarget{font-size:44px;}
+    #timeClock{font-size:38px;margin-top:18px;min-height:48px;}
+    .slot{height:38px;}
+    #echoTrack{margin-top:18px;}
   }
 </style>
 </head>
@@ -258,24 +354,37 @@
 
   <!-- ===== タイトル ===== -->
   <div id="title" class="screen">
-    <h1>ぴったり<br>リング</h1>
-    <div class="sub">RHYTHM TIMING GAME</div>
-    <div class="rule">
-      青いリングが縮んできて、<b>まん中の輪に重なった瞬間</b>にタップ / スペースキー。<br>
-      重なる直前に<b>まん中が白く光る</b>ので、光ったら押すつもりでOK。<br>
-      <b>紫のリングは裏拍</b>です。カチッという音も目印になります。
+    <!-- art/keyart.png を置くと背景になる。無ければ JS が隠すので置かなくても動く -->
+    <div id="keyartLayer">
+      <img id="keyart" src="art/keyart.png" alt="">
+      <div id="titleScrim"></div>
     </div>
-    <div class="opt">
-      <div class="optHead">音ズレ調整　<span id="offsetVal">0</span> ms</div>
-      <input type="range" id="offsetRange" min="-200" max="200" step="5" value="0">
-      <div class="optNote" id="offsetNote">
-        端末ごとの音の遅れを補正します。ふつうは<b>自動計測</b>のままでOK。
-        手で微調整したいときだけ動かしてください。
+    <div id="titleInner">
+      <h1>リズム<br>あそび</h1>
+      <div class="sub">RHYTHM TIMING GAMES</div>
+      <div class="rule">
+        タイミングを合わせる小さなゲームを<b>4つ</b>収録。<br>
+        操作は<b>タップ</b>か<b>スペースキー</b>だけです。<br>
+        はじめに音の遅れを合わせると、ぐっと押しやすくなります。
       </div>
-      <button class="btn ghost" id="calibBtn" style="margin-top:10px;width:100%;">音ズレを測りなおす</button>
+      <div class="opt">
+        <div class="optHead">音ズレ調整　<span id="offsetVal">0</span> ms</div>
+        <input type="range" id="offsetRange" min="-200" max="200" step="5" value="0">
+        <div class="optNote" id="offsetNote">
+          端末ごとの音の遅れを補正します。ふつうは<b>自動計測</b>のままでOK。
+          手で微調整したいときだけ動かしてください。
+        </div>
+        <button class="btn ghost" id="calibBtn" style="margin-top:10px;width:100%;">音ズレを測りなおす</button>
+      </div>
+      <button class="btn" id="startBtn">はじめる</button>
     </div>
-    <div class="best" id="bestLine">まだ記録がありません</div>
-    <button class="btn" id="startBtn">スタート</button>
+  </div>
+
+  <!-- ===== ゲーム選択 ===== -->
+  <div id="select" class="screen">
+    <div class="scrTitle">ゲームをえらぶ</div>
+    <div id="gameList"></div>
+    <button class="btn ghost" id="selectBackBtn" style="margin-top:16px;">タイトルへ</button>
   </div>
 
   <!-- ===== 音ズレ計測 ===== -->
@@ -342,8 +451,11 @@
   <!-- ===== プレイ ===== -->
   <div id="play" class="screen">
     <header>
-      <div class="logo">ぴったりリング</div>
-      <div class="stat">SCORE <b id="scoreVal">0</b>　COMBO <b id="comboVal">0</b></div>
+      <div class="logo" id="playLogo">ぴったりリング</div>
+      <div class="stat">
+        SCORE <b id="scoreVal">0</b>　<span id="comboStat">COMBO <b id="comboVal">0</b></span>
+        <span id="endlessStat" style="display:none;">BPM <b id="bpmVal">0</b>　<span id="lifeRow"></span></span>
+      </div>
     </header>
     <div id="progress"></div>
     <div id="ringStage">
@@ -357,9 +469,46 @@
         <div id="meterCenter"></div>
         <div id="meterMark"></div>
       </div>
-      <div id="countdownNum"><span id="countdownLabel"></span></div>
+      <div id="countdownNum" class="countdownNum"><span id="countdownLabel"></span></div>
     </div>
     <div id="hint">重なった瞬間にタップ / スペース</div>
+  </div>
+
+  <!-- ===== まねっこリズム ===== -->
+  <div id="echo" class="screen">
+    <header class="gameHead">
+      <div class="logo">まねっこリズム</div>
+      <div class="stat">SCORE <b id="echoScoreVal">0</b></div>
+    </header>
+    <div id="echoStage">
+      <div id="echoJudge"></div>
+      <div id="echoPanels">
+        <div class="echoPanel" id="echoCall">おてほん</div>
+        <div class="echoPanel" id="echoResp">あなた</div>
+      </div>
+      <div id="echoTrack"></div>
+      <div id="echoCountdownNum" class="countdownNum"><span id="echoCountdownLabel"></span></div>
+      <div id="echoRound">ラウンド <b id="echoRoundVal">1</b> / 6</div>
+    </div>
+    <div class="hintBar">聴いたリズムをそのまま、タップ / スペースで</div>
+  </div>
+
+  <!-- ===== ぴったりストップ ===== -->
+  <div id="timeg" class="screen">
+    <header class="gameHead">
+      <div class="logo">ぴったりストップ</div>
+      <div class="stat">SCORE <b id="timeScoreVal">0</b></div>
+    </header>
+    <div id="timeStage">
+      <div id="timeJudge"></div>
+      <div id="timeTargetLabel">目標タイム</div>
+      <div id="timeTarget">0.00<span>秒</span></div>
+      <div id="timeClock">0.00</div>
+      <div id="timeState">よーい…</div>
+      <div id="timeCountdownNum" class="countdownNum"><span id="timeCountdownLabel"></span></div>
+      <div id="timeRound">ラウンド <b id="timeRoundVal">1</b> / 5</div>
+    </div>
+    <div class="hintBar">ぴったりだと思った瞬間にタップ / スペース</div>
   </div>
 
   <!-- ===== 結果 ===== -->
@@ -369,6 +518,7 @@
       <div class="sub2" id="gradeSub"></div>
       <div class="tally">
         <div class="perfect">PERFECT<span id="tallyPerfect">0</span></div>
+        <div class="great" id="tallyGreatRow" style="display:none;">GREAT<span id="tallyGreat">0</span></div>
         <div class="good">GOOD<span id="tallyGood">0</span></div>
         <div class="miss">MISS<span id="tallyMiss">0</span></div>
       </div>
@@ -376,7 +526,7 @@
       <div class="bestLine" id="resultBest"></div>
       <div class="biasLine" id="resultBias"></div>
       <button class="btn" id="retryBtn">もういちど</button>
-      <button class="btn ghost" id="titleBtn" style="margin-top:10px;">タイトルへ</button>
+      <button class="btn ghost" id="selectBtn" style="margin-top:10px;">ゲームをえらぶ</button>
     </div>
   </div>
 
@@ -393,7 +543,7 @@
   if(DEBUG) window.__rhythmDebug = [];
 
   // 画面はどれか1つだけ表示する
-  const SCREENS = ["title","calib","play","result"];
+  const SCREENS = ["title","calib","select","play","echo","timeg","result"];
   function show(id){
     SCREENS.forEach(function(s){
       $(s).style.display = (s === id) ? "flex" : "none";
@@ -483,12 +633,32 @@
       tone(time, { type:"square", freq: beat.isHit ? 1200 : 800, dur:0.06, peak:0.26 });
     }
 
+    // まねっこリズム用。カウントインは共通の音、お手本の音符ははっきり違う音色で
+    // 鳴らし、応答パートには（判定音以外）何も鳴らさない — 押した分だけ音が出る。
+    // 4分の頭（slot 偶数）だけ控えめなクリックを添えて、テンポの基準を保つ。
+    function playEchoTick(beat, time){
+      ensure();
+      if(beat.isCountdown){
+        tone(time, { type:"square", freq: beat.accent ? 1400 : 900, dur:0.08, peak:0.22 });
+        return;
+      }
+      if(beat.isCall && beat.callNote){
+        tone(time, { type:"square", freq:784, dur:0.09, peak:0.24 });
+        return;
+      }
+      if(beat.slot % 2 === 0){
+        tone(time, { type:"triangle", freq:520, dur:0.035, peak:0.08 });
+      }
+    }
+
     function judgeSfx(verdict){
       const c = ensure();
       const t = c.currentTime;
       if(verdict === "perfect"){
         tone(t,        { type:"sine", freq:1046.5, dur:0.16, peak:0.3 });
         tone(t + 0.03, { type:"sine", freq:1318.5, dur:0.16, peak:0.24 });
+      }else if(verdict === "great"){
+        tone(t, { type:"sine", freq:880, dur:0.14, peak:0.26 });
       }else if(verdict === "good"){
         tone(t, { type:"sine", freq:659.3, dur:0.12, peak:0.2 });
       }else{
@@ -500,7 +670,7 @@
       tone(c.currentTime, { type:"sine", freq:520, dur:0.06, peak:0.16 });
     }
 
-    return { unlock, latency, playTick, playCalibTick, judgeSfx, tapSfx };
+    return { unlock, latency, playTick, playCalibTick, playEchoTick, judgeSfx, tapSfx };
   })();
 
   /* =========================================================
@@ -546,13 +716,27 @@
     function schedulerLoop(myId){
       if(myId !== sessionId) return;
       const c = Sfx.unlock();
-      while(idx < beats.length && nextTime < c.currentTime + SCHEDULE_AHEAD){
+      while(nextTime < c.currentTime + SCHEDULE_AHEAD){
+        // 拍を使い切ったら、ゲーム側に続きがあるか訊く（エンドレス用）。
+        // 返ってこなければ従来どおり、そこで終わり。
+        if(idx >= beats.length){
+          const more = cfg.moreBeats ? cfg.moreBeats(idx) : null;
+          if(!more || !more.length) break;
+          beats.push.apply(beats, more);
+        }
         const b = beats[idx];
         b.time = nextTime;
         cfg.onScheduleTick(b, nextTime);
         if(b.isHit) hitQueue.push({ i:idx, time:nextTime, judged:false, verdict:null });
         nextTime += (60 / b.bpm) * b.gapQN;
         idx++;
+      }
+      // whileが「拍を使い切った直後・次を要求する前」に時間切れで抜けることがある
+      // （ちょうどそのタイミングで先読み時間の上限に達した場合）。
+      // その場合でも moreBeats に一度だけ聞き直してから、本当に終わりかを判断する。
+      if(idx >= beats.length && cfg.moreBeats){
+        const more = cfg.moreBeats(idx);
+        if(more && more.length) beats.push.apply(beats, more);
       }
       if(idx >= beats.length && !ended){
         ended = true;
@@ -587,6 +771,14 @@
       running = false;
       clearInterval(timerID);
       emit("sessionEnd", {});
+    }
+
+    // 途中で打ち切る（ミス3回など）。reset() は購読ごと捨てるので sessionEnd が
+    // ゲームに届かず、この用途には使えない。
+    function finish(){
+      if(!running) return;
+      ended = true;
+      finalizeSession();
     }
 
     function start(newCfg){
@@ -633,18 +825,25 @@
 
     function isRunning(){ return running; }
     function now(){ return Sfx.unlock().currentTime; }
+    function debugInfo(){ return { idx, beatsLen: beats.length, ended, running, sessionId, hitQueueLen: hitQueue.length }; }
 
-    return { on, reset, start, judgeInput, peekHits, isRunning, now, perceived, offset };
+    return { on, reset, start, finish, judgeInput, peekHits, isRunning, now, perceived, offset, debugInfo };
   })();
 
   /* =========================================================
      3. Input — キーボード / クリック / タップ入力を統一し、二重発火を防ぐ
      ========================================================= */
   const Input = (function(){
+    // handler はゲームを切り替えるたびに setHandler() で差し替える共有の入力口。
+    // Ring/Echo/計測は Engine.judgeInput、TimeGame だけ自前の onStop に向ける。
     let handler = null;
     let lastTouchAt = 0;
+    // Engine を使わない TimeGame の「ストップ待ち」中も Space を有効にするための手動フラグ。
+    // ふだんは Engine.isRunning() だけで足りる（Ring/Echo/計測はゲーム中ずっとEngineが動いている）。
+    let manualActive = false;
 
     function setHandler(fn){ handler = fn; }
+    function setActive(v){ manualActive = v; }
     function fire(timeStamp){ if(handler) handler(timeStamp); }
 
     // 画面ごとに呼ぶ。タップ操作の登録。
@@ -665,13 +864,13 @@
     function bindKeys(){
       document.addEventListener("keydown", function(e){
         if(e.code !== "Space" || e.repeat) return;
-        if(!Engine.isRunning()) return;   // プレイ中以外はスペースの既定動作を邪魔しない
+        if(!(Engine.isRunning() || manualActive)) return;   // プレイ中以外はスペースの既定動作を邪魔しない
         e.preventDefault();
         fire(e.timeStamp);
       });
     }
 
-    return { bindPointer, bindKeys, setHandler };
+    return { bindPointer, bindKeys, setHandler, setActive };
   })();
 
   /* =========================================================
@@ -699,6 +898,43 @@
       try{ localStorage.setItem(DONE_KEY, "1"); }catch(e){}
     }
     return { load, get, set, isCalibrated, markCalibrated };
+  })();
+
+  /* =========================================================
+     4b. Scores — ゲームごとのベスト記録
+         ゲームが増えたので、1ゲーム分しか持てなかった保存を汎用化する。
+     ========================================================= */
+  const Scores = (function(){
+    // ring だけは以前 "rhythm-ring-best" に単独で保存していたので、その記録を引き継ぐ
+    const LEGACY = { ring: "rhythm-ring-best" };
+    function keyOf(gameId){ return LEGACY[gameId] || ("rhythm-best-" + gameId); }
+
+    function get(gameId){
+      let raw = null;
+      try{ raw = JSON.parse(localStorage.getItem(keyOf(gameId)) || "null"); }catch(e){ return null; }
+      if(!raw) return null;
+      // 旧形式 {bestScore,bestCombo,playCount} で保存された記録を今の形に読み替える
+      if(raw.score == null && raw.bestScore != null){
+        return { score: raw.bestScore, extra: { combo: raw.bestCombo }, playCount: raw.playCount || 0 };
+      }
+      return raw;
+    }
+    function save(gameId, rec){
+      try{ localStorage.setItem(keyOf(gameId), JSON.stringify(rec)); }catch(e){}
+    }
+    // スコアが高いほど良い記録を1件だけ持つ、という共通の更新処理
+    function submit(gameId, score, extra){
+      const prev = get(gameId);
+      const isNew = !prev || score > prev.score;
+      const rec = {
+        score: isNew ? score : prev.score,
+        extra: isNew ? (extra || null) : prev.extra,
+        playCount: (prev && prev.playCount ? prev.playCount : 0) + 1
+      };
+      save(gameId, rec);
+      return { rec, isNew };
+    }
+    return { get, save, submit };
   })();
 
   /* =========================================================
@@ -834,6 +1070,7 @@
 
     function run(){
       Engine.reset();
+      Input.setHandler(function(ts){ Engine.judgeInput(ts); });
       deltas = [];
       pulsedUpTo = -1;
       finished = false;
@@ -960,12 +1197,21 @@
     const APPROACH_QN = 2;          // 何拍ぶん手前からリングを出すか
     const SCALE_MAX = 4.2;
     const RING_POOL = 4;            // 同時に見せる先読みリングの数
-    const BEST_KEY = "rhythm-ring-best";
 
+    // エンドレスモード（mode:"endless"）の設定。見た目・判定はノーマルと共用し、
+    // 拍の作り方と終了条件だけが違う。
+    const ENDLESS_START_BPM = 90;
+    const ENDLESS_STEP_BPM  = 4;
+    const ENDLESS_STEP_HITS = 8;
+    const ENDLESS_LIVES     = 3;
+
+    let mode = "normal";
     let beats = [];
     let stats = null;
     let rings = [];
     let pulsedUpTo = -1;
+    let lives = ENDLESS_LIVES;
+    let curBpm = ENDLESS_START_BPM;
 
     function buildBeats(){
       const list = [];
@@ -974,6 +1220,7 @@
                      accent:(i >= COUNT_BEATS-4),
                      label: i >= COUNT_BEATS-4 ? String(COUNT_BEATS-i) : "" });
       }
+      if(mode === "endless") return list;   // ヒート拍は moreBeats() が随時継ぎ足す
       PHRASES.forEach(function(ph){
         if(ph.pattern === "straight"){
           for(let k=0;k<8;k++) list.push({ bpm:ph.bpm, gapQN:1, isHit:true, isOff:false });
@@ -991,17 +1238,14 @@
       return list;
     }
 
-    function loadBest(){
-      try{ return JSON.parse(localStorage.getItem(BEST_KEY) || "null"); }catch(e){ return null; }
-    }
-    function saveBest(rec){
-      try{ localStorage.setItem(BEST_KEY, JSON.stringify(rec)); }catch(e){}
-    }
-    function paintBestLine(){
-      const best = loadBest();
-      $("bestLine").innerHTML = best
-        ? "ベストスコア　<b>" + best.bestScore + "</b>　最大コンボ " + best.bestCombo
-        : "まだ記録がありません";
+    // エンドレス用: 8拍ごとにテンポを上げながら、切れ目なく拍を継ぎ足す
+    function moreEndlessBeats(nextIndex){
+      const hitsSoFar = nextIndex - COUNT_BEATS;
+      const stepNo = Math.floor(hitsSoFar / ENDLESS_STEP_HITS);
+      const bpm = ENDLESS_START_BPM + ENDLESS_STEP_BPM * stepNo;
+      const batch = [];
+      for(let k=0;k<ENDLESS_STEP_HITS;k++) batch.push({ bpm:bpm, gapQN:1, isHit:true, isOff:false });
+      return batch;
     }
 
     function resetProgress(){
@@ -1075,12 +1319,15 @@
         const lbl = activeIdx >= 0 ? beats[activeIdx].label : "";
         if(lbl){
           $("countdownNum").classList.add("show");
+          $("ringStage").classList.add("counting");
           if($("countdownLabel").textContent !== lbl) $("countdownLabel").textContent = lbl;
         }else{
           $("countdownNum").classList.remove("show");
+          $("ringStage").classList.remove("counting");
         }
       }else{
         $("countdownNum").classList.remove("show");
+        $("ringStage").classList.remove("counting");
       }
 
       // 迫ってくるリングを複数まとめて描く。先の拍まで見えるのでリズムを先読みできる。
@@ -1117,8 +1364,13 @@
       }
     }
 
+    function paintLife(){
+      let s = "";
+      for(let i=0;i<ENDLESS_LIVES;i++) s += (i < lives ? "♥" : '<span class="off">♥</span>');
+      $("lifeRow").innerHTML = s;
+    }
+
     function onJudged(payload){
-      const order = payload.i - COUNT_BEATS;   // beats配列上の位置 -> 何番目のヒート拍か
       if(payload.verdict === "perfect") stats.perfect++;
       else if(payload.verdict === "good") stats.good++;
       else stats.miss++;
@@ -1127,12 +1379,24 @@
 
       if(payload.verdict === "miss"){
         stats.combo = 0;
+        if(mode === "endless"){
+          lives--;
+          paintLife();
+          if(lives <= 0) Engine.finish();
+        }
       }else{
         stats.combo++;
         stats.maxCombo = Math.max(stats.maxCombo, stats.combo);
         stats.score += payload.verdict === "perfect" ? 100 : 50;
       }
-      paintPip(order, payload.verdict !== "miss");
+
+      if(mode === "normal"){
+        paintPip(payload.i - COUNT_BEATS, payload.verdict !== "miss");
+      }else{
+        curBpm = beats[payload.i].bpm;
+        $("bpmVal").textContent = curBpm;
+      }
+
       $("scoreVal").textContent = stats.score;
       $("comboVal").textContent = stats.combo;
       showJudgeText(payload.verdict, payload.deltaMs);
@@ -1163,35 +1427,43 @@
     }
 
     function onSessionEnd(){
-      const grade = calcGrade();
-      $("gradeText").textContent = grade.g;
-      $("gradeSub").textContent = grade.note;
+      $("tallyGreatRow").style.display = "none";
       $("tallyPerfect").textContent = stats.perfect;
       $("tallyGood").textContent = stats.good;
       $("tallyMiss").textContent = stats.miss;
       $("resultScore").textContent = stats.score;
-
-      const prevBest = loadBest();
-      const isNewBest = !prevBest || stats.score > prevBest.bestScore;
-      const rec = {
-        bestScore: isNewBest ? stats.score : prevBest.bestScore,
-        bestCombo: Math.max(stats.maxCombo, prevBest ? prevBest.bestCombo : 0),
-        playCount: (prevBest ? prevBest.playCount : 0) + 1
-      };
-      saveBest(rec);
-      $("resultBest").textContent = isNewBest
-        ? "新記録！ ベストスコア " + rec.bestScore
-        : "ベストスコア " + rec.bestScore + "（最大コンボ " + rec.bestCombo + "）";
       $("resultBias").textContent = biasText();
+
+      const gameId = mode === "endless" ? "endless" : "ring";
+      if(mode === "endless"){
+        $("gradeText").textContent = String(curBpm);
+        $("gradeSub").textContent = "到達BPM（最大コンボ " + stats.maxCombo + "）・ミス" + ENDLESS_LIVES + "回で終了";
+        const { rec, isNew } = Scores.submit(gameId, stats.score, { bpm: curBpm, maxCombo: stats.maxCombo });
+        $("resultBest").textContent = isNew
+          ? "新記録！ ベストスコア " + rec.score
+          : "ベストスコア " + rec.score + "（到達BPM " + (rec.extra ? rec.extra.bpm : "-") + "）";
+      }else{
+        const grade = calcGrade();
+        $("gradeText").textContent = grade.g;
+        $("gradeSub").textContent = grade.note;
+        const { rec, isNew } = Scores.submit(gameId, stats.score, { combo: stats.maxCombo });
+        $("resultBest").textContent = isNew
+          ? "新記録！ ベストスコア " + rec.score
+          : "ベストスコア " + rec.score + "（最大コンボ " + (rec.extra ? rec.extra.combo : "-") + "）";
+      }
 
       show("result");
     }
 
-    function begin(){
+    function begin(m){
+      mode = m === "endless" ? "endless" : "normal";
       Engine.reset();
       Sfx.unlock();
+      Input.setHandler(function(ts){ Engine.judgeInput(ts); });
       show("play");
+      $("playLogo").textContent = mode === "endless" ? "ぴったりリング・エンドレス" : "ぴったりリング";
       $("countdownNum").classList.remove("show");
+      $("ringStage").classList.remove("counting");
       $("ringTarget").classList.remove("hot");
       $("targetFill").style.opacity = "0";
       $("meterMark").style.opacity = "0";
@@ -1200,7 +1472,13 @@
       stats = { perfect:0, good:0, miss:0, combo:0, maxCombo:0, score:0, deltas:[] };
       beats = buildBeats();
       pulsedUpTo = -1;
-      resetProgress();
+      lives = ENDLESS_LIVES;
+      curBpm = ENDLESS_START_BPM;
+      $("progress").style.display = mode === "normal" ? "flex" : "none";
+      $("comboStat").style.display = mode === "normal" ? "inline" : "none";
+      $("endlessStat").style.display = mode === "endless" ? "inline" : "none";
+      if(mode === "normal") resetProgress();
+      else{ paintLife(); $("bpmVal").textContent = curBpm; }
       $("scoreVal").textContent = "0";
       $("comboVal").textContent = "0";
 
@@ -1213,7 +1491,8 @@
         searchMs: SEARCH_MS,
         missWindowMs: MISS_MS,
         userOffsetMs: Settings.get(),
-        onScheduleTick: Sfx.playTick
+        onScheduleTick: Sfx.playTick,
+        moreBeats: mode === "endless" ? moreEndlessBeats : null
       });
     }
 
@@ -1228,29 +1507,517 @@
         rings.push(el);
       }
       Input.bindPointer($("play"));
-      paintBestLine();
     }
 
-    return { mount, begin, paintBestLine };
+    return { mount, begin };
   })();
 
   /* =========================================================
-     7. 画面の行き来
+     7. EchoGame — 「まねっこリズム」ミニゲーム
+        前半1小節でお手本が鳴り、後半1小節で同じリズムを叩いて返す。
+        見て反応するRingGameと違い、聴いて覚えて返す聴覚主体のゲーム。
      ========================================================= */
+  const EchoGame = (function(){
+    const SLOTS = 8;                 // 1小節=8分音符8個
+    const ROUNDS = 6;
+    const BPM_BASE = 96, BPM_STEP = 6, STEP_ROUNDS = 2;   // 2ラウンドごとに+6
+    const COUNT_BEATS = 4;
+    // 易→難。数字は8スロット中、叩く位置（0始まり）
+    const PATTERNS = [
+      [0,2,4,6],
+      [0,4],
+      [0,2,3,4],
+      [0,1,2,4,6],
+      [0,2,4,5,6],
+      [0,1,3,4,6,7]
+    ];
+    // スロット間隔がいちばん短くなる（108bpmの8分＝約278ms）ので、
+    // 判定窓はその半分より十分小さく取り、隣のスロットと誤認しないようにする。
+    const PERFECT_MS = 40, GOOD_MS = 90, SEARCH_MS = 130, MISS_MS = 100;
+
+    let beats = [];
+    let stats = null;
+    let slotEls = [];
+    let curPhaseKey = "";     // "round:phase" 形式。切り替わったときだけ描き直す
+
+    function buildBeats(){
+      const list = [];
+      for(let i=0;i<COUNT_BEATS;i++){
+        list.push({ bpm:BPM_BASE, gapQN:1, isHit:false, isCountdown:true,
+                     accent:(i===COUNT_BEATS-1), label:String(COUNT_BEATS-i) });
+      }
+      for(let r=0;r<ROUNDS;r++){
+        const bpm = BPM_BASE + BPM_STEP * Math.floor(r / STEP_ROUNDS);
+        const pattern = PATTERNS[r];
+        for(let slot=0; slot<SLOTS; slot++){
+          list.push({ bpm, gapQN:0.5, isHit:false, isCall:true, round:r, slot,
+                       callNote: pattern.indexOf(slot) >= 0 });
+        }
+        for(let slot=0; slot<SLOTS; slot++){
+          list.push({ bpm, gapQN:0.5, isHit: pattern.indexOf(slot) >= 0, isCall:false, round:r, slot });
+        }
+      }
+      return list;
+    }
+
+    function buildTrack(){
+      const box = $("echoTrack");
+      box.innerHTML = "";
+      slotEls = [];
+      for(let i=0;i<SLOTS;i++){
+        const el = document.createElement("div");
+        el.className = "slot" + (i % 2 === 0 ? " beat" : "");
+        box.appendChild(el);
+        slotEls.push(el);
+      }
+      const head = document.createElement("div");
+      head.id = "echoHead";
+      box.appendChild(head);
+    }
+    function clearSlots(){
+      slotEls.forEach(function(el, i){ el.className = "slot" + (i % 2 === 0 ? " beat" : ""); });
+    }
+    function markGhosts(pattern){
+      clearSlots();
+      pattern.forEach(function(slot){ slotEls[slot].classList.add("ghost"); });
+    }
+
+    function showJudge(kind){
+      const el = $("echoJudge");
+      el.className = "";
+      void el.offsetWidth;
+      el.textContent = kind === "perfect" ? "PERFECT!" : kind === "good" ? "GOOD"
+                      : kind === "wait" ? "まだ！" : "MISS";
+      el.className = "show " + kind;
+    }
+
+    function onFrame(){
+      const now = Engine.now();
+      // いま鳴っている（鳴り終えた最新の）拍を探す
+      let atIdx = -1;
+      for(let i=0;i<beats.length;i++){
+        if(typeof beats[i].time !== "number") break;
+        if(Engine.perceived(beats[i].time) <= now) atIdx = i; else break;
+      }
+      if(atIdx < COUNT_BEATS - 1){
+        // カウントイン中
+        const lbl = atIdx >= 0 ? beats[atIdx].label : "";
+        if(lbl){
+          $("echoCountdownNum").classList.add("show");
+          $("echoStage").classList.add("counting");
+          if($("echoCountdownLabel").textContent !== lbl) $("echoCountdownLabel").textContent = lbl;
+        }
+        return;
+      }
+      $("echoCountdownNum").classList.remove("show");
+      $("echoStage").classList.remove("counting");
+      if(atIdx < COUNT_BEATS) return;   // まだ最初の小節が始まっていない
+
+      const b = beats[atIdx];
+      const key = b.round + ":" + (b.isCall ? "call" : "resp");
+      if(key !== curPhaseKey){
+        curPhaseKey = key;
+        $("echoRoundVal").textContent = String(b.round + 1);
+        $("echoCall").classList.toggle("active", b.isCall);
+        $("echoResp").classList.toggle("active", !b.isCall);
+        if(b.isCall) clearSlots();
+        else markGhosts(PATTERNS[b.round]);
+      }
+
+      // お手本の音符が鳴った瞬間、そのスロットを光らせる
+      if(b.isCall && b.callNote){
+        const el = slotEls[b.slot];
+        if(el && !el.classList.contains("lit")){
+          el.classList.add("lit");
+          setTimeout(function(){ el.classList.remove("lit"); }, 160);
+        }
+      }
+
+      // 再生ヘッド。いまの拍から次の拍までの間を補間して滑らかに動かす
+      const head = $("echoHead");
+      const dur = (60 / b.bpm) * b.gapQN;
+      const t0 = Engine.perceived(b.time);
+      const prog = clamp((now - t0) / dur, 0, 1);
+      const pos = (b.slot + prog) / SLOTS;
+      head.style.left = (pos * 100) + "%";
+      head.style.opacity = "1";
+    }
+
+    function onJudged(payload){
+      const b = beats[payload.i];
+      if(payload.verdict === "perfect") stats.perfect++;
+      else if(payload.verdict === "good") stats.good++;
+      else stats.miss++;
+      if(payload.deltaMs != null) stats.deltas.push(payload.deltaMs);
+      stats.score += payload.verdict === "perfect" ? 100 : payload.verdict === "good" ? 50 : 0;
+
+      const el = slotEls[b.slot];
+      if(el) el.className = "slot" + (b.slot % 2 === 0 ? " beat" : "") +
+                             (payload.verdict === "miss" ? " missed" : " hit");
+      $("echoScoreVal").textContent = stats.score;
+      showJudge(payload.verdict);
+      Sfx.judgeSfx(payload.verdict);
+    }
+
+    function onWhiff(){ showJudge("wait"); }   // お手本区間などで叩いてしまったとき
+
+    function calcGrade(){
+      const total = stats.perfect + stats.good + stats.miss;
+      const okRatio = total ? (stats.perfect + stats.good) / total : 0;
+      if(stats.miss === 0 && stats.good <= 1) return { g:"S", note:"完璧なコピー！" };
+      if(okRatio >= 0.85) return { g:"A", note:"よく聴けています！" };
+      if(okRatio >= 0.6)  return { g:"B", note:"だいたい合っています" };
+      return { g:"C", note:"また挑戦してみよう" };
+    }
+
+    function onSessionEnd(){
+      $("echoCountdownNum").classList.remove("show");
+      $("echoHead").style.opacity = "0";
+      const grade = calcGrade();
+      $("gradeText").textContent = grade.g;
+      $("gradeSub").textContent = grade.note;
+      $("tallyGreatRow").style.display = "none";
+      $("tallyPerfect").textContent = stats.perfect;
+      $("tallyGood").textContent = stats.good;
+      $("tallyMiss").textContent = stats.miss;
+      $("resultScore").textContent = stats.score;
+
+      const { rec, isNew } = Scores.submit("echo", stats.score, null);
+      $("resultBest").textContent = isNew
+        ? "新記録！ ベストスコア " + rec.score
+        : "ベストスコア " + rec.score;
+      $("resultBias").textContent = stats.deltas.length >= 4
+        ? (function(){
+            const mid = median(stats.deltas);
+            if(Math.abs(mid) < 18) return "ズレの中央値 " + mid.toFixed(0) + " ms　ほぼぴったりです。";
+            const dir = mid > 0 ? "おそめ" : "はやめ";
+            return "全体に " + Math.abs(mid).toFixed(0) + " ms " + dir + "でした。";
+          })()
+        : "";
+
+      show("result");
+    }
+
+    function begin(){
+      Engine.reset();
+      Sfx.unlock();
+      Input.setHandler(function(ts){ Engine.judgeInput(ts); });
+      show("echo");
+      $("echoCountdownNum").classList.remove("show");
+      $("echoStage").classList.remove("counting");
+      $("echoCall").classList.remove("active");
+      $("echoResp").classList.remove("active");
+
+      stats = { perfect:0, good:0, miss:0, score:0, deltas:[] };
+      beats = buildBeats();
+      curPhaseKey = "";
+      buildTrack();   // #echoHead はここで作られる。CSSの初期値がopacity:0なので追加のリセットは不要
+      $("echoScoreVal").textContent = "0";
+      $("echoRoundVal").textContent = "1";
+
+      Engine.on("frame", onFrame);
+      Engine.on("judged", onJudged);
+      Engine.on("whiff", onWhiff);
+      Engine.on("sessionEnd", onSessionEnd);
+      Engine.start({
+        beats: beats,
+        windows: { perfectMs:PERFECT_MS, goodMs:GOOD_MS },
+        searchMs: SEARCH_MS,
+        missWindowMs: MISS_MS,
+        userOffsetMs: Settings.get(),
+        onScheduleTick: Sfx.playEchoTick
+      });
+    }
+
+    function mount(){ Input.bindPointer($("echo")); }
+
+    return { mount, begin };
+  })();
+
+  /* =========================================================
+     8. TimeGame — 「ぴったりストップ」ミニゲーム
+        拍に乗るゲームではなく、指定された秒数を体内時計で当てる。
+        音の合図で始まり自分の操作で止めるため、音ズレ補正は
+        「起点だけ」にかける（下の start()/onStop() 参照）。
+     ========================================================= */
+  const TimeGame = (function(){
+    const ROUNDS = 5;
+    const TARGETS = [4.00, 6.00, 9.00, 12.00, 7.50];   // 毎回シャッフルして出す
+    const SHOW_SEC = 2.00;      // 最初にタイムを見せておく秒数（時計の速さの基準）
+    const COUNT_BEATS = 4;
+    const COUNT_BPM = 92;
+    // 誤差の判定幅（ms）
+    const PERFECT_MS = 50, GREAT_MS = 150, GOOD_MS = 400;
+
+    let order = [];       // このプレイでの目標秒の出題順
+    let round = 0;
+    let stats = null;
+    let startAt = 0;      // 「プレイヤーが開始と感じる」時刻（audioクロック、perceived済み）
+    let clockTimer = null;
+    let waitingStop = false;
+    let countBeats = [];
+
+    function shuffledTargets(){
+      const a = TARGETS.slice();
+      for(let i=a.length-1;i>0;i--){
+        const j = Math.floor(Math.random() * (i+1));
+        const t = a[i]; a[i] = a[j]; a[j] = t;
+      }
+      return a;
+    }
+
+    function fmt(sec){ return sec.toFixed(2); }
+
+    function stopClock(){ if(clockTimer){ clearInterval(clockTimer); clockTimer = null; } }
+
+    function tickClock(){
+      const el = $("timeClock");
+      const elapsed = Engine.now() - startAt;
+      if(elapsed < SHOW_SEC){
+        el.textContent = fmt(Math.max(0, elapsed));
+        el.classList.remove("hidden");
+      }else{
+        el.textContent = "?.??";
+        el.classList.add("hidden");
+      }
+    }
+
+    function judgeStop(errMs){
+      const abs = Math.abs(errMs);
+      if(abs <= PERFECT_MS) return "perfect";
+      if(abs <= GREAT_MS)   return "great";
+      if(abs <= GOOD_MS)    return "good";
+      return "miss";
+    }
+    function scoreFor(verdict){
+      return { perfect:100, great:70, good:35, miss:0 }[verdict];
+    }
+
+    function showJudge(verdict, errMs){
+      const el = $("timeJudge");
+      el.className = "";
+      void el.offsetWidth;
+      const label = verdict === "perfect" ? "PERFECT!" : verdict === "great" ? "GREAT"
+                  : verdict === "good" ? "GOOD" : "MISS";
+      const dir = errMs == null ? "" : (errMs < 0 ? "　はやい" : "　おそい");
+      el.textContent = label + (verdict === "perfect" ? "" : dir);
+      el.className = "show " + verdict;
+    }
+
+    function onStop(rawTimeStampMs){
+      if(!waitingStop) return;
+      waitingStop = false;
+      Input.setActive(false);
+      stopClock();
+      // ストップは自分の操作なので出力遅延はかからない。生の入力時刻をそのまま使う。
+      const audioOffset = Engine.now() - performance.now()/1000;
+      const stopAt = rawTimeStampMs/1000 + audioOffset;
+      const elapsedMs = (stopAt - startAt) * 1000;
+      const target = order[round];
+      const errMs = elapsedMs - target * 1000;
+      const verdict = judgeStop(errMs);
+      const pts = scoreFor(verdict);
+
+      stats.score += pts;
+      stats.errs.push(errMs);
+      stats.tally[verdict]++;
+
+      $("timeClock").textContent = (elapsedMs/1000).toFixed(2);
+      $("timeClock").classList.remove("hidden");
+      $("timeState").textContent = "誤差 " + (errMs >= 0 ? "+" : "") + Math.round(errMs) + " ms";
+      $("timeScoreVal").textContent = stats.score;
+      showJudge(verdict, errMs);
+      Sfx.judgeSfx(verdict === "great" ? "great" : verdict);
+
+      round++;
+      setTimeout(function(){
+        if(round >= ROUNDS) finish();
+        else nextRound();
+      }, 1400);
+    }
+
+    function armRound(){
+      $("timeRoundVal").textContent = String(round + 1);
+      $("timeTarget").innerHTML = fmt(order[round]) + "<span>秒</span>";
+      $("timeState").textContent = "よーい…";
+      $("timeClock").textContent = "0.00";
+      $("timeClock").classList.remove("hidden");
+      waitingStop = false;
+
+      Engine.reset();
+      countBeats = [];
+      for(let i=0;i<COUNT_BEATS;i++){
+        countBeats.push({ bpm:COUNT_BPM, gapQN:1, isHit:false, isCountdown:true,
+                           accent:(i===COUNT_BEATS-1), label:String(COUNT_BEATS-i) });
+      }
+      Engine.on("frame", onCountFrame);
+      Engine.on("sessionEnd", onCountEnd);
+      Engine.start({
+        beats: countBeats,
+        windows: { perfectMs:1, goodMs:1 },
+        searchMs: 1,
+        missWindowMs: 50,
+        userOffsetMs: Settings.get(),
+        onScheduleTick: Sfx.playTick
+      });
+    }
+
+    function onCountFrame(){
+      const now = Engine.now();
+      let activeIdx = -1;
+      for(let i=0;i<countBeats.length;i++){
+        if(typeof countBeats[i].time === "number" && Engine.perceived(countBeats[i].time) <= now) activeIdx = i;
+      }
+      if(activeIdx >= 0){
+        const lbl = countBeats[activeIdx].label;
+        $("timeCountdownNum").classList.add("show");
+        // 目標タイムは見えたままにして、時計とメッセージだけをどける
+        // （大きな数字の下に「0.00」「よーい…」が重なって見づらいので）
+        $("timeClock").style.opacity = "0";
+        $("timeState").style.opacity = "0";
+        if($("timeCountdownLabel").textContent !== lbl) $("timeCountdownLabel").textContent = lbl;
+      }
+    }
+
+    function onCountEnd(){
+      // カウントインの最終拍（「スタート」の合図）を、プレイヤーが実際に感じる時刻に変換。
+      // ここが唯一、出力遅延の補正を受ける場所。
+      startAt = Engine.perceived(countBeats[COUNT_BEATS-1].time);
+      Engine.reset();   // 以降は自前のrAFで計時するので、Engineのスケジューラは不要
+      $("timeCountdownNum").classList.remove("show");
+      $("timeClock").style.opacity = "1";
+      $("timeState").style.opacity = "1";
+      $("timeState").textContent = "スタート！";
+      waitingStop = true;
+      // ここから先はEngineを使わず自前で計時するので、
+      // キー入力の有効判定を Engine.isRunning() ではなく手動フラグに任せる。
+      Input.setHandler(function(ts){ onStop(ts); });
+      Input.setActive(true);
+      clockTimer = setInterval(tickClock, 33);
+      rafClock();
+    }
+
+    function rafClock(){
+      if(!waitingStop) return;
+      tickClock();
+      requestAnimationFrame(rafClock);
+    }
+
+    function nextRound(){ armRound(); }
+
+    function calcGrade(){
+      const t = stats.tally;
+      const total = ROUNDS;
+      if(t.perfect >= total - 1) return { g:"S", note:"体内時計が正確すぎます" };
+      if(t.perfect + t.great >= total - 1) return { g:"A", note:"かなり良い時間感覚！" };
+      if(t.miss === 0) return { g:"B", note:"安定しています" };
+      return { g:"C", note:"また挑戦してみよう" };
+    }
+
+    function finish(){
+      const grade = calcGrade();
+      $("gradeText").textContent = grade.g;
+      $("gradeSub").textContent = grade.note;
+      $("tallyGreatRow").style.display = "block";
+      $("tallyPerfect").textContent = stats.tally.perfect;
+      $("tallyGreat").textContent = stats.tally.great;
+      $("tallyGood").textContent = stats.tally.good;
+      $("tallyMiss").textContent = stats.tally.miss;
+      $("resultScore").textContent = stats.score;
+
+      const { rec, isNew } = Scores.submit("timeg", stats.score, null);
+      $("resultBest").textContent = isNew
+        ? "新記録！ ベストスコア " + rec.score
+        : "ベストスコア " + rec.score;
+      const meanErr = stats.errs.reduce(function(a,b){ return a+b; }, 0) / stats.errs.length;
+      $("resultBias").textContent =
+        "平均誤差 " + (meanErr >= 0 ? "+" : "") + meanErr.toFixed(0) + " ms";
+
+      show("result");
+    }
+
+    function begin(){
+      Sfx.unlock();
+      show("timeg");
+      order = shuffledTargets();
+      round = 0;
+      stats = { score:0, errs:[], tally:{ perfect:0, great:0, good:0, miss:0 } };
+      $("timeScoreVal").textContent = "0";
+      armRound();
+    }
+
+    function mount(){
+      Input.bindPointer($("timeg"));
+    }
+
+    // 動作検証用フック。「起点だけに音ズレ補正がかかる」設計を外側から確認できるようにする。
+    function debugState(){ return { startAt: startAt, target: order[round], errCount: stats ? stats.errs.length : 0 }; }
+
+    return { mount, begin, debugState };
+  })();
+
+  /* =========================================================
+     9. ゲーム一覧と画面の行き来
+     ========================================================= */
+  // 収録ゲームの一覧。増やすときはここに1件足すだけで選択画面・結果画面の
+  // 「もういちど」・ベストスコア表示まで自動でつながる。
+  const GAMES = [
+    { id:"ring",    name:"ぴったりリング",
+      desc:"縮んでくるリングを、まん中に合わせてタップ。基本の1本。",
+      start: function(){ RingGame.begin("normal"); } },
+    { id:"endless", name:"ぴったりリング・エンドレス",
+      desc:"テンポがだんだん上がり続ける。ミス3回で終了、どこまで行ける？",
+      start: function(){ RingGame.begin("endless"); } },
+    { id:"echo",    name:"まねっこリズム",
+      desc:"お手本のリズムを聴いて、同じ通りに叩き返す。",
+      start: function(){ EchoGame.begin(); } },
+    { id:"timeg",   name:"ぴったりストップ",
+      desc:"目標の秒数を、自分の感覚だけでぴったり止める。",
+      start: function(){ TimeGame.begin(); } }
+  ];
+  let lastGame = GAMES[0];   // 「もういちど」用に、直前に遊んだゲームを覚えておく
+
   function paintOffsetUI(){
     $("offsetRange").value = String(Settings.get());
     $("offsetVal").textContent = String(Settings.get());
   }
+  function paintGameList(){
+    const box = $("gameList");
+    box.innerHTML = "";
+    GAMES.forEach(function(g){
+      const best = Scores.get(g.id);
+      const el = document.createElement("button");
+      el.className = "btn ghost gameCard";
+      el.innerHTML =
+        '<div class="gName">' + g.name + '</div>' +
+        '<div class="gDesc">' + g.desc + '</div>' +
+        '<div class="gBest">' + (best ? "ベストスコア " + best.score : "まだ記録がありません") + '</div>';
+      el.addEventListener("click", function(){
+        lastGame = g;
+        Input.setActive(false);   // ゲーム切り替え時の安全策（TimeGame以外では無関係）
+        g.start();
+      });
+      box.appendChild(el);
+    });
+  }
   function toTitle(){
     Engine.reset();
-    RingGame.paintBestLine();
+    Input.setActive(false);
     paintOffsetUI();
     show("title");
+  }
+  function toSelect(){
+    Engine.reset();
+    Input.setActive(false);
+    paintGameList();
+    show("select");
   }
 
   Input.setHandler(function(ts){ Engine.judgeInput(ts); });
   Input.bindKeys();
   RingGame.mount();
+  EchoGame.mount();
+  TimeGame.mount();
   Calibration.mount();
   Settings.load();
   paintOffsetUI();
@@ -1259,22 +2026,29 @@
     Settings.set(Number(e.target.value) || 0);
     $("offsetVal").textContent = String(Settings.get());
   });
-  // 初回だけ自動で計測をはさむ。2回目以降はそのまま始まる。
+  // 初回だけ自動で計測をはさむ。2回目以降はそのまま選択画面へ。
   $("startBtn").addEventListener("click", function(){
     Sfx.unlock();
-    if(Settings.isCalibrated()) RingGame.begin();
-    else Calibration.open(RingGame.begin);
+    if(Settings.isCalibrated()) toSelect();
+    else Calibration.open(toSelect);
   });
   $("calibBtn").addEventListener("click", function(){
     Sfx.unlock();
     Calibration.open(toTitle);
   });
-  $("retryBtn").addEventListener("click", RingGame.begin);
-  $("titleBtn").addEventListener("click", toTitle);
+  $("selectBackBtn").addEventListener("click", toTitle);
+  $("retryBtn").addEventListener("click", function(){ lastGame.start(); });
+  $("selectBtn").addEventListener("click", toSelect);
+
+  // art/keyart.png が無い／読み込めない環境でも、そのまま今の見た目で動く
+  const keyart = $("keyart");
+  keyart.addEventListener("load", function(){ keyart.style.display = "block"; });
+  keyart.addEventListener("error", function(){ keyart.style.display = "none"; });
+  if(keyart.complete && keyart.naturalWidth) keyart.style.display = "block";
 
   show("title");
 
-  if(DEBUG){ window.__engine = Engine; window.__settings = Settings; }  // 動作検証用のフック
+  if(DEBUG){ window.__engine = Engine; window.__settings = Settings; window.__scores = Scores; window.__timeg = TimeGame; }  // 動作検証用のフック
 
 })();
 </script>
