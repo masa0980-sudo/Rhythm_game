@@ -242,7 +242,7 @@
   .biasLine{font-size:12px;line-height:1.7;opacity:.9;margin:8px 0 0;color:var(--accent);white-space:pre-line;}
 
   /* ===== タイトルのキーアート =====
-     art/keyart.png があれば背景に敷く。無ければ JS が隠すので、画像なしでもそのまま動く。 */
+     art/keyart.jpg があれば背景に敷く。無ければ JS が隠すので、画像なしでもそのまま動く。 */
   #keyartLayer{position:absolute;inset:0;z-index:0;overflow:hidden;}
   #keyart{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
   #titleScrim{position:absolute;inset:0;
@@ -354,9 +354,9 @@
 
   <!-- ===== タイトル ===== -->
   <div id="title" class="screen">
-    <!-- art/keyart.png を置くと背景になる。無ければ JS が隠すので置かなくても動く -->
+    <!-- art/keyart.jpg を置くと背景になる。無ければ JS が隠すので置かなくても動く -->
     <div id="keyartLayer">
-      <img id="keyart" src="art/keyart.png" alt="">
+      <img id="keyart" src="art/keyart.jpg" alt="">
       <div id="titleScrim"></div>
     </div>
     <div id="titleInner">
@@ -2040,7 +2040,7 @@
   $("retryBtn").addEventListener("click", function(){ lastGame.start(); });
   $("selectBtn").addEventListener("click", toSelect);
 
-  // art/keyart.png が無い／読み込めない環境でも、そのまま今の見た目で動く
+  // art/keyart.jpg が無い／読み込めない環境でも、そのまま今の見た目で動く
   const keyart = $("keyart");
   keyart.addEventListener("load", function(){ keyart.style.display = "block"; });
   keyart.addEventListener("error", function(){ keyart.style.display = "none"; });
