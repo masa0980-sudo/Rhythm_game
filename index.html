@@ -246,12 +246,12 @@
   .rankBox{margin:16px 0 4px;padding:12px 14px;border-radius:14px;text-align:left;
     background:rgba(20,26,40,.5);border:1px solid var(--line);}
   .rankTitle{font-size:12px;font-weight:800;letter-spacing:.05em;opacity:.85;margin-bottom:6px;}
-  #rankList{list-style:none;font-size:13px;line-height:1.9;max-height:220px;overflow-y:auto;}
-  #rankList li{display:flex;align-items:center;gap:8px;padding:2px 0;}
-  #rankList .rankNo{width:1.6em;flex:none;opacity:.6;font-weight:800;text-align:right;}
-  #rankList .rankInit{flex:1;font-weight:800;letter-spacing:.08em;color:var(--accent2);}
-  #rankList .rankScore{flex:none;font-variant-numeric:tabular-nums;opacity:.9;}
-  #rankList .rankEmpty{opacity:.6;justify-content:center;}
+  #rankList, #scoresRankList{list-style:none;font-size:13px;line-height:1.9;max-height:220px;overflow-y:auto;}
+  #rankList li, #scoresRankList li{display:flex;align-items:center;gap:8px;padding:2px 0;}
+  #rankList .rankNo, #scoresRankList .rankNo{width:1.6em;flex:none;opacity:.6;font-weight:800;text-align:right;}
+  #rankList .rankInit, #scoresRankList .rankInit{flex:1;font-weight:800;letter-spacing:.08em;color:var(--accent2);}
+  #rankList .rankScore, #scoresRankList .rankScore{flex:none;font-variant-numeric:tabular-nums;opacity:.9;}
+  #rankList .rankEmpty, #scoresRankList .rankEmpty{opacity:.6;justify-content:center;}
   #rankList li.mine{background:rgba(90,209,255,.14);border-radius:8px;}
   #rankEntry{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
   #rankEntry.show{display:block;}
@@ -294,6 +294,19 @@
   .gameCard .gName{font-size:15px;font-weight:800;letter-spacing:.04em;color:var(--accent2);}
   .gameCard .gDesc{font-size:11.5px;line-height:1.7;opacity:.8;margin-top:3px;}
   .gameCard .gBest{font-size:11px;margin-top:5px;color:var(--accent);opacity:.9;}
+
+  /* ===== スコア確認 ===== */
+  #scores{z-index:33;padding:20px;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;overflow-y:auto;}
+  #scoresInner{position:relative;z-index:1;display:flex;flex-direction:column;
+    align-items:center;width:100%;max-width:340px;}
+  #scoresTabs{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;width:100%;margin-top:12px;}
+  .scoreTab{padding:7px 12px;border-radius:999px;font-size:11.5px;font-weight:800;
+    color:var(--text);background:rgba(20,26,40,.66);border:1px solid var(--line);cursor:pointer;
+    transition:background .15s,border-color .15s;}
+  .scoreTab:hover{background:rgba(255,255,255,.09);}
+  .scoreTab.active{color:var(--bg0);background:var(--accent2);border-color:var(--accent2);}
+  #scoresRankBox{width:100%;}
 
   /* 各ゲーム共通の見出し行と下部ヒント */
   .gameHead{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 12px;}
@@ -422,7 +435,25 @@
     <div id="selectInner">
       <div class="scrTitle">ゲームをえらぶ</div>
       <div id="gameList"></div>
-      <button class="btn ghost" id="selectBackBtn" style="margin-top:16px;">タイトルへ</button>
+      <button class="btn ghost" id="scoresBtn" style="margin-top:16px;">スコアを確認する</button>
+      <button class="btn ghost" id="selectBackBtn" style="margin-top:10px;">タイトルへ</button>
+    </div>
+  </div>
+
+  <!-- ===== スコア確認 ===== -->
+  <div id="scores" class="screen">
+    <div class="keyartLayer">
+      <img class="keyartImg" src="art/keyart.jpg" alt="">
+      <div class="keyartScrim"></div>
+    </div>
+    <div id="scoresInner">
+      <div class="scrTitle">スコアを確認する</div>
+      <div id="scoresTabs"></div>
+      <div class="rankBox" id="scoresRankBox">
+        <div class="rankTitle">みんなのランキング TOP10</div>
+        <ol id="scoresRankList"><li class="rankEmpty">読み込み中…</li></ol>
+      </div>
+      <button class="btn ghost" id="scoresBackBtn" style="margin-top:16px;">ゲームをえらぶへ</button>
     </div>
   </div>
 
@@ -594,7 +625,7 @@
   if(DEBUG) window.__rhythmDebug = [];
 
   // 画面はどれか1つだけ表示する
-  const SCREENS = ["title","calib","select","play","echo","timeg","result"];
+  const SCREENS = ["title","calib","select","scores","play","echo","timeg","result"];
   function show(id){
     SCREENS.forEach(function(s){
       $(s).style.display = (s === id) ? "flex" : "none";
@@ -1085,8 +1116,8 @@
           Ring/Echo/TimeGame の3つから共通で呼ばれる。
      ========================================================= */
   const RankUI = (function(){
-    function renderList(list){
-      const ol = $("rankList");
+    function renderList(list, ol){
+      ol = ol || $("rankList");
       ol.innerHTML = "";
       if(!list.length){
         ol.innerHTML = '<li class="rankEmpty">まだ記録がありません。最初の1人になろう！</li>';
@@ -1146,7 +1177,7 @@
       });
     }
 
-    return { show };
+    return { show, renderList };
   })();
 
   /* =========================================================
@@ -2232,6 +2263,45 @@
     show("select");
   }
 
+  // ===== スコア確認画面 =====
+  let scoresGameId = GAMES[0].id;
+  function paintScoresTabs(){
+    const box = $("scoresTabs");
+    box.innerHTML = "";
+    GAMES.forEach(function(g){
+      const el = document.createElement("button");
+      el.className = "scoreTab" + (g.id === scoresGameId ? " active" : "");
+      el.textContent = g.name;
+      el.addEventListener("click", function(){
+        if(scoresGameId === g.id) return;
+        scoresGameId = g.id;
+        paintScoresTabs();
+        loadScoresList();
+      });
+      box.appendChild(el);
+    });
+  }
+  function loadScoresList(){
+    const ol = $("scoresRankList");
+    ol.innerHTML = '<li class="rankEmpty">読み込み中…</li>';
+    const gameId = scoresGameId;
+    Leaderboard.fetchTop10(gameId).then(function(top10){
+      if(gameId !== scoresGameId) return;   // 待っている間にタブが切り替わっていたら捨てる
+      if(top10 === null){
+        ol.innerHTML = '<li class="rankEmpty">取得できませんでした（通信環境をご確認ください）</li>';
+        return;
+      }
+      RankUI.renderList(top10, ol);
+    });
+  }
+  function toScores(){
+    Engine.reset();
+    Input.setActive(false);
+    paintScoresTabs();
+    loadScoresList();
+    show("scores");
+  }
+
   Input.setHandler(function(ts){ Engine.judgeInput(ts); });
   Input.bindKeys();
   RingGame.mount();
@@ -2256,6 +2326,8 @@
     Calibration.open(toTitle);
   });
   $("selectBackBtn").addEventListener("click", toTitle);
+  $("scoresBtn").addEventListener("click", toScores);
+  $("scoresBackBtn").addEventListener("click", toSelect);
   $("retryBtn").addEventListener("click", function(){ lastGame.start(); });
   $("selectBtn").addEventListener("click", toSelect);
 
