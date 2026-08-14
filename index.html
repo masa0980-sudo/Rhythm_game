@@ -256,9 +256,9 @@
   #rankEntry{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
   #rankEntry.show{display:block;}
   .rankCongrats{font-size:12.5px;font-weight:800;color:var(--accent2);margin-bottom:8px;}
-  #rankInitials{width:100%;padding:9px 12px;border-radius:9px;margin-bottom:8px;
+  #rankInitials{width:100%;padding:11px 12px;border-radius:9px;margin-bottom:8px;
     background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);
-    font-size:14px;letter-spacing:.06em;text-align:center;}
+    font-size:16px;letter-spacing:.06em;text-align:center;}
   #rankInitials:focus{outline:none;border-color:var(--accent);}
   #rankInitials::placeholder{color:var(--text);opacity:.35;}
   #rankStatus{font-size:11.5px;line-height:1.7;opacity:.8;margin-top:8px;min-height:1em;}
@@ -601,7 +601,8 @@
         <ol id="rankList"><li class="rankEmpty">読み込み中…</li></ol>
         <div id="rankEntry">
           <div class="rankCongrats">TOP10入り！イニシャルを登録しよう</div>
-          <input type="text" id="rankInitials" maxlength="6" placeholder="例) M.O" autocomplete="off">
+          <input type="text" id="rankInitials" maxlength="6" placeholder="例) M.O" autocomplete="off"
+            autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="done">
           <button class="btn" id="rankSubmitBtn">登録する</button>
         </div>
         <div id="rankStatus"></div>
@@ -1135,6 +1136,20 @@
         ol.appendChild(li);
       });
     }
+
+    // スマホ/タブレットでソフトキーボードが登録ボタンに重なっても入力欄が隠れないようにする。
+    // また、キーボードの「完了」キー(Enter)でそのまま登録できるようにする。
+    $("rankInitials").addEventListener("focus", function(){
+      setTimeout(function(){
+        $("rankInitials").scrollIntoView({ block: "center", behavior: "smooth" });
+      }, 300);   // キーボードが開いてレイアウトが落ち着くのを待つ
+    });
+    $("rankInitials").addEventListener("keydown", function(e){
+      if(e.key === "Enter"){
+        e.preventDefault();
+        $("rankSubmitBtn").click();
+      }
+    });
 
     // ゲーム終了のたびに呼ぶ。TOP10を取ってきて表示し、
     // 入るスコアなら（10件未満、またはビリより上）イニシャル登録欄を出す。
