@@ -739,6 +739,12 @@
         tone(time + 0.1,  { type:"sine", freq:990, dur:0.16, peak:0.34 });
         return;
       }
+      // 応答パートが実際に始まる、まさにその瞬間。「間」の合図は予告でしかないので、
+      // ここで独立した明るいクリックを鳴らし、開始位置そのものを音でも指し示す。
+      if(beat.respStart){
+        tone(time, { type:"square", freq:1047, dur:0.07, peak:0.32 });
+        return;
+      }
       if(beat.slot % 2 === 0){
         tone(time, { type:"triangle", freq:520, dur:0.035, peak:0.08 });
       }
@@ -1830,7 +1836,8 @@
         // 実際に叩き始める1音めまで余裕ができ、フライング/出遅れしにくくなる。
         list.push({ bpm, gapQN:1, isHit:false, isCall:false, isPrep:true, round:r });
         for(let slot=0; slot<SLOTS; slot++){
-          list.push({ bpm, gapQN:0.5, isHit: pattern.indexOf(slot) >= 0, isCall:false, round:r, slot });
+          list.push({ bpm, gapQN:0.5, isHit: pattern.indexOf(slot) >= 0, isCall:false, round:r, slot,
+                       respStart: slot === 0 });
         }
       }
       return list;
@@ -1909,8 +1916,8 @@
         }
       }
 
-      // お手本の音符が鳴った瞬間、そのスロットを光らせる
-      if(b.isCall && b.callNote){
+      // お手本の音符が鳴った瞬間や、応答パートが実際に始まる瞬間に、そのスロットを光らせる
+      if((b.isCall && b.callNote) || b.respStart){
         const el = slotEls[b.slot];
         if(el && !el.classList.contains("lit")){
           el.classList.add("lit");
