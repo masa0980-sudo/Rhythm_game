@@ -732,11 +732,12 @@
         tone(time, { type:"square", freq:784, dur:0.09, peak:0.24 });
         return;
       }
-      // 応答パートの1音め。お手本が終わって「あなたの番」に切り替わったことを
-      // 音でもはっきり伝える合図（上向きの2音）
-      if(beat.respStart){
-        tone(time,        { type:"sine", freq:660, dur:0.09, peak:0.22 });
-        tone(time + 0.05, { type:"sine", freq:990, dur:0.12, peak:0.22 });
+      // お手本と応答の間の「間」の拍。ここでしっかり聞こえる音量ではっきり
+      // 上向きの2音を鳴らし、「あなたの番」への切り替わりを伝える。
+      if(beat.isPrep){
+        tone(time,        { type:"sine", freq:660, dur:0.13, peak:0.34 });
+        tone(time + 0.1,  { type:"sine", freq:990, dur:0.16, peak:0.34 });
+        return;
       }
       if(beat.slot % 2 === 0){
         tone(time, { type:"triangle", freq:520, dur:0.035, peak:0.08 });
@@ -1824,9 +1825,12 @@
           list.push({ bpm, gapQN:0.5, isHit:false, isCall:true, round:r, slot,
                        callNote: pattern.indexOf(slot) >= 0 });
         }
+        // お手本の直後に無音で応答が始まると切り替わりが分からないので、
+        // 1拍分の「間」を挟んで「どうぞ」の合図を出す。ここで一呼吸おけるぶん、
+        // 実際に叩き始める1音めまで余裕ができ、フライング/出遅れしにくくなる。
+        list.push({ bpm, gapQN:1, isHit:false, isCall:false, isPrep:true, round:r });
         for(let slot=0; slot<SLOTS; slot++){
-          list.push({ bpm, gapQN:0.5, isHit: pattern.indexOf(slot) >= 0, isCall:false, round:r, slot,
-                       respStart: slot === 0 });
+          list.push({ bpm, gapQN:0.5, isHit: pattern.indexOf(slot) >= 0, isCall:false, round:r, slot });
         }
       }
       return list;
@@ -1912,6 +1916,12 @@
           el.classList.add("lit");
           setTimeout(function(){ el.classList.remove("lit"); }, 160);
         }
+      }
+
+      // 「間」の拍の最中は、まだ応答トラックが始まっていないのでヘッドは動かさず隠す
+      if(b.isPrep){
+        $("echoHead").style.opacity = "0";
+        return;
       }
 
       // 再生ヘッド。いまの拍から次の拍までの間を補間して滑らかに動かす
