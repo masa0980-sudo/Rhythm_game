@@ -225,7 +225,8 @@
   /* ===== 結果 ===== */
   #result{z-index:40;
     align-items:center;justify-content:center;padding:22px;
-    background:rgba(6,8,13,.88);backdrop-filter:blur(3px);}
+    background:rgba(6,8,13,.88);backdrop-filter:blur(3px);
+    overflow-y:auto;}
   .card{width:100%;max-width:340px;padding:24px 22px;border-radius:18px;text-align:center;
     background:rgba(18,23,36,.97);border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.55);}
   .card h2{font-size:44px;letter-spacing:.06em;margin-bottom:4px;color:var(--accent2);
@@ -240,6 +241,26 @@
   .bestLine{font-size:12px;opacity:.75;margin-bottom:4px;}
   /* 平均してどれだけ早い/遅いかを伝え、音ズレ調整の目安にしてもらう */
   .biasLine{font-size:12px;line-height:1.7;opacity:.9;margin:8px 0 0;color:var(--accent);white-space:pre-line;}
+
+  /* サーバー(Firestore)に記録するランキング */
+  .rankBox{margin:16px 0 4px;padding:12px 14px;border-radius:14px;text-align:left;
+    background:rgba(20,26,40,.5);border:1px solid var(--line);}
+  .rankTitle{font-size:12px;font-weight:800;letter-spacing:.05em;opacity:.85;margin-bottom:6px;}
+  #rankList{list-style:none;font-size:13px;line-height:1.9;max-height:220px;overflow-y:auto;}
+  #rankList li{display:flex;align-items:center;gap:8px;padding:2px 0;}
+  #rankList .rankNo{width:1.6em;flex:none;opacity:.6;font-weight:800;text-align:right;}
+  #rankList .rankInit{flex:1;font-weight:800;letter-spacing:.08em;color:var(--accent2);}
+  #rankList .rankScore{flex:none;font-variant-numeric:tabular-nums;opacity:.9;}
+  #rankList .rankEmpty{opacity:.6;justify-content:center;}
+  #rankList li.mine{background:rgba(90,209,255,.14);border-radius:8px;}
+  #rankEntry{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);}
+  #rankEntry.show{display:block;}
+  .rankCongrats{font-size:12.5px;font-weight:800;color:var(--accent2);margin-bottom:8px;}
+  #rankInitials{width:100%;padding:9px 12px;border-radius:9px;margin-bottom:8px;
+    background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);
+    font-size:14px;letter-spacing:.06em;text-align:center;}
+  #rankInitials:focus{outline:none;border-color:var(--accent);}
+  #rankStatus{font-size:11.5px;line-height:1.7;opacity:.8;margin-top:8px;min-height:1em;}
 
   /* ===== キーアート背景 =====
      art/keyart.jpg があれば背景に敷く。無ければ JS が隠すので、画像なしでもそのまま動く。
@@ -542,6 +563,18 @@
       <div class="scoreLine">SCORE <b id="resultScore">0</b></div>
       <div class="bestLine" id="resultBest"></div>
       <div class="biasLine" id="resultBias"></div>
+
+      <div class="rankBox">
+        <div class="rankTitle">みんなのランキング TOP10</div>
+        <ol id="rankList"><li class="rankEmpty">読み込み中…</li></ol>
+        <div id="rankEntry">
+          <div class="rankCongrats">TOP10入り！イニシャルを登録しよう</div>
+          <input type="text" id="rankInitials" maxlength="6" placeholder="M.O" autocomplete="off">
+          <button class="btn" id="rankSubmitBtn">登録する</button>
+        </div>
+        <div id="rankStatus"></div>
+      </div>
+
       <button class="btn" id="retryBtn">もういちど</button>
       <button class="btn ghost" id="selectBtn" style="margin-top:10px;">ゲームをえらぶ</button>
     </div>
@@ -952,6 +985,167 @@
       return { rec, isNew };
     }
     return { get, save, submit };
+  })();
+
+  /* =========================================================
+     4c. Leaderboard — Firestore の REST API を直接叩く、みんなの TOP10
+          SDKは読み込まず fetch() だけで完結させている（単一HTMLの方針を保つため）。
+          書き込みは Firestore 側のセキュリティルールで検証・制限しており、
+          既存の記録の書き換え・削除はルール上できない（不正対策の最低限）。
+     ========================================================= */
+  const Leaderboard = (function(){
+    const PROJECT_ID = "rythm-game-mo";
+    const API_KEY = "AIzaSyBBo4f_LqJ2lfdKu8Q11oeiiYq_O-15LSc";
+    const ROOT = "https://firestore.googleapis.com/v1/projects/" + PROJECT_ID + "/databases/(default)/documents";
+
+    // JSの値 -> Firestoreの型つきJSON。今回使う型だけ最低限対応する。
+    function toValue(v){
+      if(v === null || v === undefined) return { nullValue: null };
+      if(typeof v === "string") return { stringValue: v };
+      if(typeof v === "number") return { integerValue: String(Math.round(v)) };
+      if(typeof v === "boolean") return { booleanValue: v };
+      if(typeof v === "object"){
+        const fields = {};
+        Object.keys(v).forEach(function(k){ fields[k] = toValue(v[k]); });
+        return { mapValue: { fields: fields } };
+      }
+      return { nullValue: null };
+    }
+    // Firestoreの型つきJSON -> ふつうのJSの値
+    function fromValue(fv){
+      if(!fv) return null;
+      if("stringValue"  in fv) return fv.stringValue;
+      if("integerValue" in fv) return parseInt(fv.integerValue, 10);
+      if("doubleValue"  in fv) return fv.doubleValue;
+      if("booleanValue" in fv) return fv.booleanValue;
+      if("timestampValue" in fv) return fv.timestampValue;
+      if("mapValue" in fv) return fieldsToObj(fv.mapValue && fv.mapValue.fields);
+      return null;
+    }
+    function fieldsToObj(fields){
+      const out = {};
+      Object.keys(fields || {}).forEach(function(k){ out[k] = fromValue(fields[k]); });
+      return out;
+    }
+
+    // gameId の TOP10 をスコア降順で取得。取れなければ null（オフライン等）。
+    function fetchTop10(gameId){
+      const url = ROOT + "/leaderboard/" + encodeURIComponent(gameId) + ":runQuery?key=" + API_KEY;
+      const body = {
+        structuredQuery: {
+          from: [{ collectionId: "scores" }],
+          orderBy: [{ field: { fieldPath: "score" }, direction: "DESCENDING" }],
+          limit: 10
+        }
+      };
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }).then(function(res){
+        if(!res.ok) throw new Error("http " + res.status);
+        return res.json();
+      }).then(function(rows){
+        return (rows || []).filter(function(r){ return r && r.document; }).map(function(r){
+          const obj = fieldsToObj(r.document.fields);
+          obj.id = r.document.name.split("/").pop();
+          return obj;
+        });
+      }).catch(function(e){
+        console.warn("leaderboard fetch failed:", e);
+        return null;
+      });
+    }
+
+    // スコアを1件登録する。initials は6文字までに切り詰める（ルール側の上限と合わせている）。
+    function submitScore(gameId, initials, score, extra){
+      const url = ROOT + "/leaderboard/" + encodeURIComponent(gameId) + "/scores?key=" + API_KEY;
+      const fields = {
+        initials: toValue(String(initials || "???").slice(0, 6)),
+        score: toValue(score),
+        ts: { timestampValue: new Date().toISOString() }
+      };
+      if(extra != null) fields.extra = toValue(extra);
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fields: fields })
+      }).then(function(res){
+        if(!res.ok) throw new Error("http " + res.status);
+        return res.json();
+      });
+    }
+
+    return { fetchTop10, submitScore };
+  })();
+
+  /* =========================================================
+     4d. RankUI — 結果画面のランキング表示（TOP10 + イニシャル登録）
+          Ring/Echo/TimeGame の3つから共通で呼ばれる。
+     ========================================================= */
+  const RankUI = (function(){
+    function renderList(list){
+      const ol = $("rankList");
+      ol.innerHTML = "";
+      if(!list.length){
+        ol.innerHTML = '<li class="rankEmpty">まだ記録がありません。最初の1人になろう！</li>';
+        return;
+      }
+      list.forEach(function(row, i){
+        const li = document.createElement("li");
+        const no = document.createElement("span");
+        no.className = "rankNo"; no.textContent = (i + 1) + ".";
+        const init = document.createElement("span");
+        init.className = "rankInit"; init.textContent = row.initials || "???";
+        const sc = document.createElement("span");
+        sc.className = "rankScore"; sc.textContent = row.score;
+        li.appendChild(no); li.appendChild(init); li.appendChild(sc);
+        ol.appendChild(li);
+      });
+    }
+
+    // ゲーム終了のたびに呼ぶ。TOP10を取ってきて表示し、
+    // 入るスコアなら（10件未満、またはビリより上）イニシャル登録欄を出す。
+    function show(gameId, score, extra){
+      $("rankList").innerHTML = '<li class="rankEmpty">読み込み中…</li>';
+      $("rankEntry").classList.remove("show");
+      $("rankStatus").textContent = "";
+
+      Leaderboard.fetchTop10(gameId).then(function(top10){
+        if(top10 === null){
+          $("rankList").innerHTML = "";
+          $("rankStatus").textContent = "ランキングを取得できませんでした（通信環境をご確認ください）";
+          return;
+        }
+        renderList(top10);
+        const qualifies = top10.length < 10 || score > top10[top10.length - 1].score;
+        if(!qualifies) return;
+
+        $("rankEntry").classList.add("show");
+        $("rankInitials").value = "";
+        const btn = $("rankSubmitBtn");
+        btn.disabled = false;
+        btn.textContent = "登録する";
+        btn.onclick = function(){
+          const initials = ($("rankInitials").value || "").trim() || "???";
+          btn.disabled = true;
+          btn.textContent = "登録中…";
+          Leaderboard.submitScore(gameId, initials, score, extra).then(function(){
+            $("rankStatus").textContent = "登録しました！";
+            $("rankEntry").classList.remove("show");
+            return Leaderboard.fetchTop10(gameId);
+          }).then(function(fresh){
+            if(fresh) renderList(fresh);
+          }).catch(function(){
+            $("rankStatus").textContent = "登録に失敗しました。もう一度お試しください。";
+            btn.disabled = false;
+            btn.textContent = "登録する";
+          });
+        };
+      });
+    }
+
+    return { show };
   })();
 
   /* =========================================================
@@ -1452,22 +1646,26 @@
       $("resultBias").textContent = biasText();
 
       const gameId = mode === "endless" ? "endless" : "ring";
+      let extra;
       if(mode === "endless"){
+        extra = { bpm: curBpm, maxCombo: stats.maxCombo };
         $("gradeText").textContent = String(curBpm);
         $("gradeSub").textContent = "到達BPM（最大コンボ " + stats.maxCombo + "）・ミス" + ENDLESS_LIVES + "回で終了";
-        const { rec, isNew } = Scores.submit(gameId, stats.score, { bpm: curBpm, maxCombo: stats.maxCombo });
+        const { rec, isNew } = Scores.submit(gameId, stats.score, extra);
         $("resultBest").textContent = isNew
           ? "新記録！ ベストスコア " + rec.score
           : "ベストスコア " + rec.score + "（到達BPM " + (rec.extra ? rec.extra.bpm : "-") + "）";
       }else{
+        extra = { combo: stats.maxCombo };
         const grade = calcGrade();
         $("gradeText").textContent = grade.g;
         $("gradeSub").textContent = grade.note;
-        const { rec, isNew } = Scores.submit(gameId, stats.score, { combo: stats.maxCombo });
+        const { rec, isNew } = Scores.submit(gameId, stats.score, extra);
         $("resultBest").textContent = isNew
           ? "新記録！ ベストスコア " + rec.score
           : "ベストスコア " + rec.score + "（最大コンボ " + (rec.extra ? rec.extra.combo : "-") + "）";
       }
+      RankUI.show(gameId, stats.score, extra);
 
       show("result");
     }
@@ -1703,6 +1901,7 @@
       $("resultBest").textContent = isNew
         ? "新記録！ ベストスコア " + rec.score
         : "ベストスコア " + rec.score;
+      RankUI.show("echo", stats.score, null);
       $("resultBias").textContent = stats.deltas.length >= 4
         ? (function(){
             const mid = median(stats.deltas);
@@ -1946,6 +2145,7 @@
       $("resultBest").textContent = isNew
         ? "新記録！ ベストスコア " + rec.score
         : "ベストスコア " + rec.score;
+      RankUI.show("timeg", stats.score, null);
       const meanErr = stats.errs.reduce(function(a,b){ return a+b; }, 0) / stats.errs.length;
       $("resultBias").textContent =
         "平均誤差 " + (meanErr >= 0 ? "+" : "") + meanErr.toFixed(0) + " ms";
