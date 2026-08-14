@@ -324,6 +324,9 @@
   .echoPanel.active{opacity:1;border-color:var(--accent2);
     box-shadow:0 0 22px rgba(255,209,102,.35);}
   #echoResp.active{border-color:var(--accent);box-shadow:0 0 22px rgba(90,209,255,.35);}
+  /* 応答パートが始まった瞬間、パネルを一瞬弾ませて「あなたの番」を視覚的にも強調する */
+  @keyframes echoPulse{0%{transform:scale(1);}35%{transform:scale(1.09);}100%{transform:scale(1);}}
+  .echoPanel.pulse{animation:echoPulse .35s ease-out;}
   /* 8スロットのトラック。叩くべき位置をゴーストで見せ、再生ヘッドが左から右へ流れる */
   #echoTrack{position:relative;display:flex;gap:5px;width:100%;max-width:330px;margin-top:26px;}
   .slot{flex:1;height:46px;border-radius:9px;background:rgba(255,255,255,.06);
@@ -341,7 +344,7 @@
     font-size:23px;font-weight:900;letter-spacing:.05em;opacity:0;white-space:nowrap;pointer-events:none;}
   #echoJudge.show{animation:judgePop .6s ease-out;}
   #echoJudge.perfect{color:var(--accent2);} #echoJudge.good{color:var(--good);}
-  #echoJudge.miss{color:var(--ng);} #echoJudge.wait{color:#c68cff;}
+  #echoJudge.miss{color:var(--ng);} #echoJudge.wait{color:#c68cff;} #echoJudge.go{color:var(--accent);}
 
   /* ===== ぴったりストップ ===== */
   #timeg{flex-direction:column;height:100%;padding:16px 16px 20px;touch-action:none;}
@@ -728,6 +731,12 @@
       if(beat.isCall && beat.callNote){
         tone(time, { type:"square", freq:784, dur:0.09, peak:0.24 });
         return;
+      }
+      // 応答パートの1音め。お手本が終わって「あなたの番」に切り替わったことを
+      // 音でもはっきり伝える合図（上向きの2音）
+      if(beat.respStart){
+        tone(time,        { type:"sine", freq:660, dur:0.09, peak:0.22 });
+        tone(time + 0.05, { type:"sine", freq:990, dur:0.12, peak:0.22 });
       }
       if(beat.slot % 2 === 0){
         tone(time, { type:"triangle", freq:520, dur:0.035, peak:0.08 });
@@ -1816,7 +1825,8 @@
                        callNote: pattern.indexOf(slot) >= 0 });
         }
         for(let slot=0; slot<SLOTS; slot++){
-          list.push({ bpm, gapQN:0.5, isHit: pattern.indexOf(slot) >= 0, isCall:false, round:r, slot });
+          list.push({ bpm, gapQN:0.5, isHit: pattern.indexOf(slot) >= 0, isCall:false, round:r, slot,
+                       respStart: slot === 0 });
         }
       }
       return list;
@@ -1849,7 +1859,7 @@
       el.className = "";
       void el.offsetWidth;
       el.textContent = kind === "perfect" ? "PERFECT!" : kind === "good" ? "GOOD"
-                      : kind === "wait" ? "まだ！" : "MISS";
+                      : kind === "wait" ? "まだ！" : kind === "go" ? "どうぞ！" : "MISS";
       el.className = "show " + kind;
     }
 
@@ -1882,8 +1892,17 @@
         $("echoRoundVal").textContent = String(b.round + 1);
         $("echoCall").classList.toggle("active", b.isCall);
         $("echoResp").classList.toggle("active", !b.isCall);
-        if(b.isCall) clearSlots();
-        else markGhosts(PATTERNS[b.round]);
+        if(b.isCall){
+          clearSlots();
+        }else{
+          markGhosts(PATTERNS[b.round]);
+          // 「あなたの番」に切り替わった瞬間だけ、見た目でもはっきり伝える
+          showJudge("go");
+          const resp = $("echoResp");
+          resp.classList.remove("pulse");
+          void resp.offsetWidth;
+          resp.classList.add("pulse");
+        }
       }
 
       // お手本の音符が鳴った瞬間、そのスロットを光らせる
