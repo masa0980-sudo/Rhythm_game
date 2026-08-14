@@ -1800,15 +1800,30 @@
     const ROUNDS = 6;
     const BPM_BASE = 96, BPM_STEP = 6, STEP_ROUNDS = 2;   // 2ラウンドごとに+6
     const COUNT_BEATS = 4;
-    // 易→難。数字は8スロット中、叩く位置（0始まり）
-    const PATTERNS = [
-      [0,2,4,6],
-      [0,4],
-      [0,2,3,4],
-      [0,1,2,4,6],
-      [0,2,4,5,6],
-      [0,1,3,4,6,7]
+    // 各ラウンドで使うお手本パターンの候補。BPMが上がるタイミング(2ラウンドごと)に
+    // 合わせて易→難の3段階にグループ化してあり、プレイのたびにここからランダムに
+    // 選ぶことで、同じ回のプレイでもお手本のバリエーションが変わるようにしている。
+    // 数字は8スロット中、叩く位置（0始まり）。
+    const PATTERN_TIERS = [
+      [ [0,2,4,6], [0,4], [0,2,4], [0,4,6] ],                      // Tier1: 96bpm・4分主体
+      [ [0,2,3,4], [0,1,2,4,6], [0,2,4,6,7], [0,1,4,6] ],          // Tier2: 102bpm・軽いシンコペーション
+      [ [0,2,4,5,6], [0,1,3,4,6,7], [0,1,3,5,6], [0,2,3,5,6,7] ],  // Tier3: 108bpm・密なシンコペーション
     ];
+    let patterns = [];   // begin() のたびにラウンド分をランダムに選び直す
+
+    // ティアごとにシャッフルしてから必要数だけ取り、同じ回のプレイ内で重複しにくくする
+    function pickPatterns(){
+      const list = [];
+      PATTERN_TIERS.forEach(function(tier){
+        const pool = tier.slice();
+        for(let i = pool.length - 1; i > 0; i--){
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+        }
+        for(let i=0; i<STEP_ROUNDS; i++) list.push(pool[i % pool.length]);
+      });
+      return list;
+    }
     // スロット間隔がいちばん短くなる（108bpmの8分＝約278ms）ので、
     // 判定窓はその半分より十分小さく取り、隣のスロットと誤認しないようにする。
     const PERFECT_MS = 40, GOOD_MS = 90, SEARCH_MS = 130, MISS_MS = 100;
@@ -1826,7 +1841,7 @@
       }
       for(let r=0;r<ROUNDS;r++){
         const bpm = BPM_BASE + BPM_STEP * Math.floor(r / STEP_ROUNDS);
-        const pattern = PATTERNS[r];
+        const pattern = patterns[r];
         for(let slot=0; slot<SLOTS; slot++){
           list.push({ bpm, gapQN:0.5, isHit:false, isCall:true, round:r, slot,
                        callNote: pattern.indexOf(slot) >= 0 });
@@ -1906,7 +1921,7 @@
         if(b.isCall){
           clearSlots();
         }else{
-          markGhosts(PATTERNS[b.round]);
+          markGhosts(patterns[b.round]);
           // 「あなたの番」に切り替わった瞬間だけ、見た目でもはっきり伝える
           showJudge("go");
           const resp = $("echoResp");
@@ -2008,6 +2023,7 @@
       $("echoResp").classList.remove("active");
 
       stats = { perfect:0, good:0, miss:0, score:0, deltas:[] };
+      patterns = pickPatterns();
       beats = buildBeats();
       curPhaseKey = "";
       buildTrack();   // #echoHead はここで作られる。CSSの初期値がopacity:0なので追加のリセットは不要
