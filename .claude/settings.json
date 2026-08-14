@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m http.server *)",
+      "mcp__github__actions_list",
+      "mcp__github__get_job_logs"
+    ]
+  }
+}
