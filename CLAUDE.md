@@ -22,6 +22,12 @@ that way rather than introducing tooling.
 - **Deploy**: push to the `claude/browser-game-ai-weueub` branch. GitHub Actions
   (`.github/workflows/deploy-pages.yml`) rebuilds and republishes GitHub Pages automatically —
   there is no separate deploy command.
+  When checking the run, note that the Actions API can return **job state that is several minutes
+  stale** — a step can look stuck for ten-plus minutes when it actually finished in one. Don't
+  cancel or re-run on that basis; wait and re-fetch, and treat `get_job_logs` (look for
+  `Evaluated environment url: ...`) as the authoritative answer. This sandbox cannot reach
+  `*.github.io`, so the live page can never be confirmed from here — say so rather than implying
+  it was checked.
 
 ## Architecture
 
