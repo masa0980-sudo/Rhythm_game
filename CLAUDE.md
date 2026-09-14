@@ -81,7 +81,14 @@ game-select cards and the "もういちど" retry button call through). `fetchCo
 four docs into one `:batchGet` call to populate the small play-count line on each game card.
 
 Both calls are fire-and-forget / non-blocking by design — the game must never wait on this
-network round trip before starting. The rules only allow updating `count` by exactly +1 on an
-existing doc; document creation is disallowed from the client, so the four `playCounts/*`
-documents must already exist (seeded by hand in the Firebase console, `count: 0`) before this
-works at all. If counts stop appearing, check that first rather than assuming a code bug.
+network round trip before starting. `increment()` tries the +1 transform first (the steady-state
+case, one request); if that fails because the doc doesn't exist yet, it falls back to creating the
+doc with `count: 1` (one extra request, only on a gameId's very first play ever). The rules mirror
+this: `allow update` only ever accepts exactly +1, and `allow create` only accepts a brand-new doc
+whose only field is `count: 1` — no manual Firebase-console seeding needed for a new gameId.
+
+This Firestore project (`rythm-game-mo`) is intentionally **shared across several separate public
+games** (tennis-game, neon-void, typing_quotes, etc.), not just this repo — each game's own
+`playCounts/{gameId}` document lives in the same `playCounts` collection, keyed by an id unique to
+that game (`ring`/`endless`/`echo`/`timeg` here; `tennis`, `neon-void`, etc. elsewhere). If you're
+choosing a new gameId, check it doesn't collide with another game's.

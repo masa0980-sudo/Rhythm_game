@@ -1134,6 +1134,8 @@
           Leaderboardと同じ方針でSDKを使わずfetch()で完結させる。
           書き込みはFirestoreのfieldTransform(increment)でアトミックに+1するだけ、
           読み取りは対象4件をbatchGetでまとめて1リクエストにする。
+          このプロジェクト(rythm-game-mo)は他の複数の公開ゲームとも共有しており、
+          playCounts配下のドキュメントIDはこのアプリの4種("ring"等)に限らない。
      ========================================================= */
   const PlayCounts = (function(){
     const PROJECT_ID = "rythm-game-mo";
@@ -1141,10 +1143,13 @@
     const ROOT = "https://firestore.googleapis.com/v1/projects/" + PROJECT_ID + "/databases/(default)/documents";
 
     // 再生開始のたびに+1。失敗してもゲームプレイには一切影響させない（fire-and-forget）。
+    // 通常は既存ドキュメントへのincrementで1リクエスト完結。ドキュメントがまだ無い
+    // (新しいgameIdの初回プレイ)場合だけ、count=1での新規作成にフォールバックする
+    // (ルール側もcount==1での新規作成のみ許可しているので、以降の手動セットアップは不要)。
     function increment(gameId){
-      const url = ROOT + ":commit?key=" + API_KEY;
+      const commitUrl = ROOT + ":commit?key=" + API_KEY;
       const docPath = "projects/" + PROJECT_ID + "/databases/(default)/documents/playCounts/" + encodeURIComponent(gameId);
-      const body = {
+      const incrementBody = {
         writes: [{
           transform: {
             document: docPath,
@@ -1152,10 +1157,23 @@
           }
         }]
       };
-      return fetch(url, {
+      const createBody = {
+        writes: [{
+          update: { name: docPath, fields: { count: { integerValue: "1" } } },
+          currentDocument: { exists: false }
+        }]
+      };
+      return fetch(commitUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(incrementBody)
+      }).then(function(res){
+        if(res.ok) return;
+        return fetch(commitUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(createBody)
+        });
       }).catch(function(e){ console.warn("playCount increment failed:", e); });
     }
 
