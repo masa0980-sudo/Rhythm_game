@@ -70,3 +70,18 @@ The rules also mean a sandboxed/offline dev environment may not be able to reach
 fast. Treat a stuck "読み込み中…" during local testing as an environment/network limitation, not
 necessarily a code bug; confirm the actual leaderboard behavior in a real browser with network
 access.
+
+### PlayCounts (Firestore)
+
+Same no-SDK, `fetch()`-only approach as `Leaderboard`, but a separate collection
+(`playCounts/{gameId}`, one doc per game, single `count` field) so its rules don't interact with
+the leaderboard's. `increment()` fires a `:commit` request with a `fieldTransforms[].increment`
+transform — atomic +1, no read-modify-write — from `startGame()` (the shared helper both the
+game-select cards and the "もういちど" retry button call through). `fetchCounts()` batches all
+four docs into one `:batchGet` call to populate the small play-count line on each game card.
+
+Both calls are fire-and-forget / non-blocking by design — the game must never wait on this
+network round trip before starting. The rules only allow updating `count` by exactly +1 on an
+existing doc; document creation is disallowed from the client, so the four `playCounts/*`
+documents must already exist (seeded by hand in the Firebase console, `count: 0`) before this
+works at all. If counts stop appearing, check that first rather than assuming a code bug.

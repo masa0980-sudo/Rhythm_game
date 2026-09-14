@@ -294,6 +294,7 @@
   .gameCard .gName{font-size:15px;font-weight:800;letter-spacing:.04em;color:var(--accent2);}
   .gameCard .gDesc{font-size:11.5px;line-height:1.7;opacity:.8;margin-top:3px;}
   .gameCard .gBest{font-size:11px;margin-top:5px;color:var(--accent);opacity:.9;}
+  .gameCard .gCount{font-size:10.5px;margin-top:2px;opacity:.55;}
 
   /* ===== スコア確認 ===== */
   #scores{z-index:33;padding:20px;flex-direction:column;align-items:center;justify-content:center;
@@ -1126,6 +1127,68 @@
     }
 
     return { fetchTop10, submitScore };
+  })();
+
+  /* =========================================================
+     4c-2. PlayCounts — 各ゲームの累計プレイ回数（Firestore, カウントのみ）
+          Leaderboardと同じ方針でSDKを使わずfetch()で完結させる。
+          書き込みはFirestoreのfieldTransform(increment)でアトミックに+1するだけ、
+          読み取りは対象4件をbatchGetでまとめて1リクエストにする。
+     ========================================================= */
+  const PlayCounts = (function(){
+    const PROJECT_ID = "rythm-game-mo";
+    const API_KEY = "AIzaSyBBo4f_LqJ2lfdKu8Q11oeiiYq_O-15LSc";
+    const ROOT = "https://firestore.googleapis.com/v1/projects/" + PROJECT_ID + "/databases/(default)/documents";
+
+    // 再生開始のたびに+1。失敗してもゲームプレイには一切影響させない（fire-and-forget）。
+    function increment(gameId){
+      const url = ROOT + ":commit?key=" + API_KEY;
+      const docPath = "projects/" + PROJECT_ID + "/databases/(default)/documents/playCounts/" + encodeURIComponent(gameId);
+      const body = {
+        writes: [{
+          transform: {
+            document: docPath,
+            fieldTransforms: [{ fieldPath: "count", increment: { integerValue: "1" } }]
+          }
+        }]
+      };
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }).catch(function(e){ console.warn("playCount increment failed:", e); });
+    }
+
+    // 複数ゲームのカウントを1回のリクエストでまとめて取得。取れなければ空オブジェクト。
+    function fetchCounts(gameIds){
+      const url = ROOT + ":batchGet?key=" + API_KEY;
+      const docs = gameIds.map(function(id){
+        return "projects/" + PROJECT_ID + "/databases/(default)/documents/playCounts/" + encodeURIComponent(id);
+      });
+      return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documents: docs })
+      }).then(function(res){
+        if(!res.ok) throw new Error("http " + res.status);
+        return res.json();
+      }).then(function(rows){
+        const out = {};
+        (rows || []).forEach(function(r){
+          if(r && r.found){
+            const id = r.found.name.split("/").pop();
+            const f = r.found.fields || {};
+            out[id] = f.count ? parseInt(f.count.integerValue, 10) : 0;
+          }
+        });
+        return out;
+      }).catch(function(e){
+        console.warn("playCount fetch failed:", e);
+        return {};
+      });
+    }
+
+    return { increment, fetchCounts };
   })();
 
   /* =========================================================
@@ -2293,6 +2356,15 @@
   ];
   let lastGame = GAMES[0];   // 「もういちど」用に、直前に遊んだゲームを覚えておく
 
+  // ゲーム選択画面のカードクリックと「もういちど」の両方から呼ぶ共通の開始処理。
+  // プレイ回数のカウントはここに一本化する（結果を待たずに開始するので体感速度には影響しない）。
+  function startGame(g){
+    lastGame = g;
+    Input.setActive(false);   // ゲーム切り替え時の安全策（TimeGame以外では無関係）
+    PlayCounts.increment(g.id);
+    g.start();
+  }
+
   function paintOffsetUI(){
     $("offsetRange").value = String(Settings.get());
     $("offsetVal").textContent = String(Settings.get());
@@ -2304,16 +2376,22 @@
       const best = Scores.get(g.id);
       const el = document.createElement("button");
       el.className = "btn ghost gameCard";
+      el.dataset.gameId = g.id;
       el.innerHTML =
         '<div class="gName">' + g.name + '</div>' +
         '<div class="gDesc">' + g.desc + '</div>' +
-        '<div class="gBest">' + (best ? "ベストスコア " + best.score : "まだ記録がありません") + '</div>';
-      el.addEventListener("click", function(){
-        lastGame = g;
-        Input.setActive(false);   // ゲーム切り替え時の安全策（TimeGame以外では無関係）
-        g.start();
-      });
+        '<div class="gBest">' + (best ? "ベストスコア " + best.score : "まだ記録がありません") + '</div>' +
+        '<div class="gCount"></div>';
+      el.addEventListener("click", function(){ startGame(g); });
       box.appendChild(el);
+    });
+    // 表示用の累計プレイ回数は非同期で後から埋める（取れない時は空欄のまま静かに諦める）。
+    PlayCounts.fetchCounts(GAMES.map(function(g){ return g.id; })).then(function(counts){
+      GAMES.forEach(function(g){
+        if(counts[g.id] == null) return;
+        const target = box.querySelector('[data-game-id="' + g.id + '"] .gCount');
+        if(target) target.textContent = counts[g.id] + " 回プレイ";
+      });
     });
   }
   function toTitle(){
@@ -2395,7 +2473,7 @@
   $("selectBackBtn").addEventListener("click", toTitle);
   $("scoresBtn").addEventListener("click", toScores);
   $("scoresBackBtn").addEventListener("click", toSelect);
-  $("retryBtn").addEventListener("click", function(){ lastGame.start(); });
+  $("retryBtn").addEventListener("click", function(){ startGame(lastGame); });
   $("selectBtn").addEventListener("click", toSelect);
 
   // 音ズレ設定はふだんボタンだけにしておき、押したときだけパネルを開く
