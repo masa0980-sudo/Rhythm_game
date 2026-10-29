@@ -92,3 +92,25 @@ games** (tennis-game, neon-void, typing_quotes, etc.), not just this repo — ea
 `playCounts/{gameId}` document lives in the same `playCounts` collection, keyed by an id unique to
 that game (`ring`/`endless`/`echo`/`timeg` here; `tennis`, `neon-void`, etc. elsewhere). If you're
 choosing a new gameId, check it doesn't collide with another game's.
+
+## Mini mode (`?mini=1`, called from mini-medley)
+
+The hub in `C:\claude\repos\mini-medley` opens this page in an iframe with `?mini=1&sec=20&mute=0|1`.
+**The protocol is specified in mini-medley's CLAUDE.md**; this section only records Rhythm_game's side.
+Without `mini=1` everything behaves exactly as before.
+
+- It plays **ぴったりリング (normal) only**. A one-line `<head>` script adds `<html class="mini">` before first paint; CSS hides
+  every screen except `#play`. `miniBoot()` calls `show("play")` and posts `mini-ready`; the hub's `mini-go` runs `miniGo()`,
+  which calls `RingGame.begin("normal")` **directly** (not `startGame(g)`, so `PlayCounts` is not incremented).
+- `COUNT_BEATS` is 4 instead of 8 in mini mode (the hub already shows its own 3-2-1; the count-in is only for feeling the tempo).
+  The whole run takes about 18 s, so the `sec` safety cut (`Engine.finish()` after `sec` seconds, which emits `sessionEnd`) normally
+  never fires with the hub's `sec=20`. **If you change `PHRASES`/`COUNT_BEATS`, re-check the run still fits in `sec`.**
+- `onSessionEnd()` has a `MINI` branch at the top that returns before `Scores.submit`, `RankUI` (Firestore TOP10) and the result
+  screen. `RingGame.miniStats()` exposes the internal `stats` for `endMini()`.
+- Score: judgement points (PERFECT 100 / GOOD 50) ÷ 2400 × 100. Measured with a bot: all-perfect → 92–100, all-GOOD (taps 90 ms
+  off) → 50, no input → 0. Taps are judged against the **saved audio-offset setting** (`rhythm-ring-offset`, from the calibration
+  done in the normal game on the same origin); mini mode never runs or writes the calibration.
+- `mute=1` sets `Sfx`'s `master` gain to 0 (`master` is not rewritten elsewhere). Nothing is written to localStorage in mini mode.
+- Verification: add `&debug=1` to expose `window.__engine`; a bot can press Space when `__engine.perceived(__engine.peekHits(1)[0].time)`
+  equals `__engine.now()`. Standalone check: `?mini=1&sec=30` auto-starts after 300 ms (`window.parent === window`).
+- Deploys from the branch `claude/browser-game-ai-weueub` (not `main`).

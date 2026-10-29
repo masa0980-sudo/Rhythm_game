@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>ぴったりリング</title>
+<script>if(/[?&]mini=1(&|$)/.test(location.search)) document.documentElement.classList.add("mini");</script>
 <style>
+  /* ミニ版(?mini=1。mini-medley の iframe から呼ばれる)では、プレイ画面以外を出さない */
+  .mini #title,.mini #calib,.mini #select,.mini #scores,.mini #result,.mini #echo,.mini #timeg{display:none !important;}
   :root{
     --bg0:#0a0d14; --bg1:#151b2b;
     --accent:#5ad1ff; --accent2:#ffd166;
@@ -626,6 +629,11 @@
   const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
 
   // ?debug=1 のとき、判定のたびに誤差(ms)を window.__rhythmDebug に記録する（動作検証用）
+  /* ミニ版(mini-medley 用)。?mini=1&sec=<秒>&mute=<0|1>。仕様は mini-medley/CLAUDE.md */
+  const MINI_Q = new URLSearchParams(location.search);
+  const MINI = MINI_Q.get("mini") === "1";
+  const MINI_SEC = Math.max(5, parseFloat(MINI_Q.get("sec")) || 20);
+  const MINI_MUTED = MINI && MINI_Q.get("mute") === "1";
   const DEBUG = /[?&]debug=1\b/.test(location.search);
   if(DEBUG) window.__rhythmDebug = [];
 
@@ -654,7 +662,7 @@
       if(!ctx){
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         master = ctx.createGain();
-        master.gain.value = 0.35;
+        master.gain.value = MINI_MUTED ? 0 : 0.35;
         master.connect(ctx.destination);
       }
       return ctx;
@@ -1553,7 +1561,7 @@
       { bpm:100, pattern:"straight" },
       { bpm:108, pattern:"synco"    }
     ];
-    const COUNT_BEATS = 8;          // 手拍子を合わせる余裕をもたせた長めのカウントイン
+    const COUNT_BEATS = MINI ? 4 : 8;   // 手拍子を合わせる余裕をもたせた長めのカウントイン(ミニ版は短く)
     const COUNTDOWN_BPM = 92;
     const HIT_TOTAL = PHRASES.length * 8;
     const APPROACH_QN = 2;          // 何拍ぶん手前からリングを出すか
@@ -1789,6 +1797,7 @@
     }
 
     function onSessionEnd(){
+      if(MINI){ endMini(); return; }
       $("tallyGreatRow").style.display = "none";
       $("tallyPerfect").textContent = stats.perfect;
       $("tallyGood").textContent = stats.good;
@@ -1875,7 +1884,8 @@
       Input.bindPointer($("play"));
     }
 
-    return { mount, begin };
+    function miniStats(){ return stats; }
+    return { mount, begin, miniStats };
   })();
 
   /* =========================================================
@@ -2514,7 +2524,32 @@
     if(img.complete && img.naturalWidth) img.style.display = "block";
   });
 
-  show("title");
+  /* ===== ミニ版(mini-medley から呼ばれる) =====
+     「ぴったりリング」(ノーマル)だけ。読み込み → 待機 → ハブの mini-go で開始 → 24拍の終了か sec 秒で mini-result を返す。
+     点数: 判定の合計(PERFECT=100・GOOD=50) ÷ 2400 × 100。PlayCounts・ベスト・TOP10・結果画面は出さない。
+     音ズレ調整は、端末に保存済みの値(前に計測していれば)をそのまま使う。 */
+  let miniDone = false, miniTimer = null;
+  function miniBoot(){
+    show("play");
+    window.addEventListener("message", function(e){ if(e.source === window.parent && e.data && e.data.type === "mini-go") miniGo(); });
+    window.parent.postMessage({ type: "mini-ready", game: "rhythm-game" }, "*");
+    if(window.parent === window) setTimeout(miniGo, 300);   // 単独で ?mini=1 を開いたとき(デバッグ用)は自動で始める
+  }
+  function miniGo(){
+    if(miniDone || miniTimer) return;
+    RingGame.begin("normal");
+    miniTimer = setTimeout(function(){ if(!miniDone) Engine.finish(); }, MINI_SEC * 1000);   // 終了を待たずに打ち切る(finish が sessionEnd を出す)
+  }
+  function endMini(){
+    if(miniDone) return; miniDone = true;
+    clearTimeout(miniTimer);
+    const st = RingGame.miniStats();
+    const score = clamp(Math.round(st.score / (24 * 100) * 100), 0, 100);
+    window.parent.postMessage({ type: "mini-result", game: "rhythm-game", score: score,
+      detail: { rawScore: st.score, perfect: st.perfect, good: st.good, miss: st.miss, maxCombo: st.maxCombo } }, "*");
+  }
+
+  if(MINI) miniBoot(); else show("title");
 
   if(DEBUG){ window.__engine = Engine; window.__settings = Settings; window.__scores = Scores; window.__timeg = TimeGame; }  // 動作検証用のフック
 
